@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "terraboard.fullname" . }}
+  labels:
+  {{ include "terraboard.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "terraboard.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "terraboard.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+    imagePullSecrets:
+      {{- toYaml . | nindent 8 }}
+  ￼   {{- end }}
+serviceAccountName: {{ template "terraboard.serviceAccountName" . }}
+securityContext:
+  {{- toYaml .Values.podSecurityContext | nindent 8 }}
+containers:
+  {{- if .Values.containers }}
+  {{ toYaml .Values.containers | indent 8 }}
+  {{- end }}
+- name: {{ .Chart.Name }}
+  securityContext:
+    {{- toYaml .Values.securityContext | nindent 12 }}
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+  imagePullPolicy: {{ .Values.image.pullPolicy }}
+  {{- if .Values.additionalYamlConfig }}
+  volumeMounts:
+    - name: custom-config-yaml
+      mountPath: /config
+  {{- end }}
+  ports:
+    - name: http
+      containerPort: 8080
+      protocol: TCP
+    - name: swagger
+      containerPort: 8081
+      protocol: TCP
+  env:
+    {{- if .Values.additionalYamlConfig }}
+    - name: CONFIG_FILE
+      value: /config/config.yaml
+    {{- end }}
+    - name: TERRABOARD_BASE_URL
+      value: {{ .Values.terraboard.base_url }}
+    - name: TERRABOARD_PORT
+      value: {{ .Values.service.targetPort | quote }}
+    - name: TERRABOARD_SWAGGER_PORT
+      value: {{ .Values.swagger.service.targetPort | quote }}
+    - name: DB_HOST
+      value: {{ .Values.db.host }}
+    - name: DB_SSLMODE
+      value: {{ .Values.db.sslmode }}
+    - name: DB_NAME
+      value: {{ .Values.db.name }}
+    - name: DB_USER
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "terraboard.fullname" . }}
+          key: DB_USER
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "terraboard.fullname" . }}
+          key: DB_PASSWORD
+
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "terraboard.fullname" . }}
+          key: AWS_ACCESS_KEY_ID
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "terraboard.fullname" . }}
+          key: AWS_SECRET_ACCESS_KEY
+    - name: AWS_REGION
+      value: {{ .Values.aws.region }}
+    - name: AWS_BUCKET
+      value: {{ .Values.aws.bucket }}
+    - name: AWS_DYNAMODB_TABLE
+      value: {{ .Values.aws.dynamodb_table }}
+    - name: AWS_FILE_EXTENSION
+      value: {{ .Values.aws.file_extension }}
+
+    {{- with .Values.additionalEnv }}
+    {{- toYaml . | nindent 12 }}
+    {{- end }}
+
+  #          livenessProbe:
+  #            httpGet:
+  #              path: /
+  #              port: http
+  #          readinessProbe:
+  #            httpGet:
+  #              path: /
+  #              port: http
+  resources:
+    {{- toYaml .Values.resources | nindent 12 }}
+volumes:
+  {{- if .Values.additionalYamlConfig }}
+- name: custom-config-yaml
+  configMap:
+    name: {{ include "terraboard.fullname" . }}-configmap
+    items:
+      - key: config.yaml
+        path: config.yaml
+  {{- end }}
+  {{- if .Values.volumes }}
+  {{ toYaml .Values.volumes | indent 8 }}
+  {{- end }}
+- name: secrets
+  secret:
+    secretName: {{ include "terraboard.fullname" . }}
+  {{- with .Values.nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with .Values.affinity }}
+affinity:
+  {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with .Values.tolerations }}
+tolerations:
+  {{- toYaml . | nindent 8 }}
+  {{- end }}
