@@ -1,0 +1,50 @@
+name: Release Helm Chart
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'helm/**'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.12.1'
+
+      - name: Create chart-repo directory
+        run: mkdir -p chart-repo
+
+      - name: Package Helm chart
+        run: |
+          helm package helm/ --destination chart-repo/
+
+      - name: Index Helm chart repository
+        run: |
+          helm repo index chart-repo/ --url https://nkbud.github.io/terraboard/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: './chart-repo'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
