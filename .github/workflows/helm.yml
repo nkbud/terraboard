@@ -2,8 +2,8 @@ name: Release Helm Chart
 
 on:
   push:
-    branches:
-      - master
+    tags:
+      - '*'
     paths:
       - 'helm/**'
 

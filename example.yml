@@ -13,7 +13,7 @@ database:
 
 provider:
   no-locks: true
-  no-versioning: false
+  no-versioning: true
 
 aws:
   - access-key: root

@@ -5,15 +5,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: camptocamp/terraboard:devel
     environment:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
       AWS_REGION: ${AWS_DEFAULT_REGION}
       AWS_BUCKET: ${AWS_BUCKET}
       AWS_DYNAMODB_TABLE: ${AWS_DYNAMODB_TABLE}
       DB_PASSWORD: mypassword
       DB_SSLMODE: disable
+      TERRABOARD_NO_VERSIONING: true
+      TERRABOARD_NO_LOCKS: true
       GODEBUG: netdns=go
     depends_on:
       db:
