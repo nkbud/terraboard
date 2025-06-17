@@ -403,7 +403,7 @@ docker run -p 8080:8080 \
   -e DB_PASSWORD="<mypassword>" \
   -e DB_SSLMODE="disable" \
   --net terraboard \
-  ghcr.io/camptocamp/terraboard:latest
+  ghcr.io/nkbud/terraboard:latest
 ```
 
 Then point your browser to http://localhost:8080.
@@ -411,13 +411,28 @@ Then point your browser to http://localhost:8080.
 
 ## Use with Kubernetes
 
-A Helm chart is available on [Camptocamp's repository](https://github.com/camptocamp/charts/tree/master/terraboard).
+A Helm chart is available as an OCI artifact in GitHub Container Registry.
 
 In order to install it:
 
 ```shell
-$ helm repo add c2c https://camptocamp.github.io/charts
-$ helm install -v values.yaml terraboard c2c/terraboard
+# Pull and install from OCI registry
+$ helm registry login ghcr.io
+$ helm install terraboard oci://ghcr.io/nkbud/terraboard --version 2.4.0
+```
+
+Alternatively, you can pull the chart first and then install:
+
+```shell
+$ helm registry login ghcr.io
+$ helm pull oci://ghcr.io/nkbud/terraboard --version 2.4.0
+$ helm install terraboard terraboard-2.4.0.tgz
+```
+
+You can also use a values file for configuration:
+
+```shell
+$ helm install terraboard oci://ghcr.io/nkbud/terraboard --version 2.4.0 -f values.yaml
 ```
 
 
