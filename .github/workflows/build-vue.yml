@@ -1,4 +1,4 @@
-name: Build-VueJS
+name: Build Vue
 
 on: [push]
 
