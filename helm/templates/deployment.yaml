@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: {{ include "terraboard.fullname" . }}
   labels:
-  {{ include "terraboard.labels" . | indent 4 }}
+    {{- include "terraboard.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:

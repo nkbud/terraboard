@@ -41,21 +41,25 @@ func NewAWS(aws config.AWSConfig, bucket config.S3BucketConfig, noLocks, noVersi
 
 	sess := session.Must(session.NewSession())
 	awsConfig := aws_sdk.NewConfig()
-	var creds *credentials.Credentials
+	
+	// Set up credentials: prioritize role ARN, then static credentials, then default chain
 	if len(aws.APPRoleArn) > 0 {
 		log.Debugf("Using %s role", aws.APPRoleArn)
-		creds = stscreds.NewCredentials(sess, aws.APPRoleArn, func(p *stscreds.AssumeRoleProvider) {
+		creds := stscreds.NewCredentials(sess, aws.APPRoleArn, func(p *stscreds.AssumeRoleProvider) {
 			if aws.ExternalID != "" {
 				p.ExternalID = aws_sdk.String(aws.ExternalID)
 			}
 		})
+		awsConfig.WithCredentials(creds)
+	} else if aws.AccessKey != "" && aws.SecretAccessKey != "" {
+		log.Debug("Using static AWS credentials")
+		creds := credentials.NewStaticCredentials(aws.AccessKey, aws.SecretAccessKey, aws.SessionToken)
+		awsConfig.WithCredentials(creds)
 	} else {
-		if aws.AccessKey == "" || aws.SecretAccessKey == "" {
-			log.Fatal("Missing AccessKey or SecretAccessKey for AWS provider. Please check your configuration and retry")
-		}
-		creds = credentials.NewStaticCredentials(aws.AccessKey, aws.SecretAccessKey, aws.SessionToken)
+		log.Debug("Using AWS default credential provider chain")
+		// Don't set explicit credentials, let AWS SDK use default credential provider chain
+		// This supports IRSA, EC2 instance profiles, environment variables, etc.
 	}
-	awsConfig.WithCredentials(creds)
 
 	if e := aws.Endpoint; e != "" {
 		awsConfig.WithEndpoint(e)
