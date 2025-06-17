@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: {{ include "terraboard.fullname" . }}
   labels:
-  {{ include "terraboard.labels" . | indent 4 }}
+    {{- include "terraboard.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:

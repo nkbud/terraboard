@@ -60,18 +60,58 @@ func TestNewAWSNoBucket(t *testing.T) {
 	}
 }
 
-func TestNewAWSNoCredentials(t *testing.T) {
-	// Remove os.Exit call to logrus Fatal
-	logrus.StandardLogger().ExitFunc = func(code int) {}
+func TestNewAWSWithDefaultCredentials(t *testing.T) {
+	// Set log level to debug to capture debug messages
+	originalLevel := logrus.GetLevel()
+	logrus.SetLevel(logrus.DebugLevel)
+	defer logrus.SetLevel(originalLevel)
 
 	// Redirect logrus output to a buffer
 	buf := &bytes.Buffer{}
+	originalOutput := logrus.StandardLogger().Out
 	logrus.SetOutput(buf)
+	defer logrus.SetOutput(originalOutput)
 
-	_ = NewAWS(
+	awsInstance := NewAWS(
 		config.AWSConfig{
-			AccessKey:       "",
-			SecretAccessKey: "",
+			Region:   "us-east-1",
+			Endpoint: "http://localhost:8000",
+		},
+		config.S3BucketConfig{
+			Bucket: "test",
+		},
+		false,
+		false,
+	)
+
+	// Should create an AWS instance that uses default credential provider chain
+	if awsInstance == nil || awsInstance.svc == nil {
+		t.Error("AWS instance should be created with default credential provider chain")
+	}
+
+	// Should log about using default credential provider chain
+	logOutput := buf.String()
+	if !strings.Contains(logOutput, "Using AWS default credential provider chain") {
+		t.Errorf("Expected log message about using default credential provider chain, got: %s", logOutput)
+	}
+}
+
+func TestNewAWSWithStaticCredentialsStillUsesDefault(t *testing.T) {
+	// Set log level to debug to capture debug messages
+	originalLevel := logrus.GetLevel()
+	logrus.SetLevel(logrus.DebugLevel)
+	defer logrus.SetLevel(originalLevel)
+
+	// Redirect logrus output to a buffer
+	buf := &bytes.Buffer{}
+	originalOutput := logrus.StandardLogger().Out
+	logrus.SetOutput(buf)
+	defer logrus.SetOutput(originalOutput)
+
+	awsInstance := NewAWS(
+		config.AWSConfig{
+			AccessKey:       "AKIAIOSFODNN7EXAMPLE",
+			SecretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
 			Region:          "us-east-1",
 			Endpoint:        "http://localhost:8000",
 		},
@@ -82,17 +122,29 @@ func TestNewAWSNoCredentials(t *testing.T) {
 		false,
 	)
 
-	// Test output
-	t.Log(buf)
-	if buf.Len() == 0 || !strings.Contains(buf.String(), "Missing AccessKey or SecretAccessKey for AWS provider") {
-		t.Error("Missing or bad log output")
+	if awsInstance == nil || awsInstance.svc == nil {
+		t.Error("AWS instance is nil")
 	}
-	if strings.Count(buf.String(), "\n") > 1 {
-		t.Error("Expected only a single line of log output")
+
+	// Should log about using default credential provider chain, not static credentials
+	logOutput := buf.String()
+	if !strings.Contains(logOutput, "Using AWS default credential provider chain") {
+		t.Errorf("Expected log message about using default credential provider chain, got: %s", logOutput)
 	}
 }
 
-func TestNewAWSWithAPPRoleArn(t *testing.T) {
+func TestNewAWSWithAPPRoleArnStillUsesDefault(t *testing.T) {
+	// Set log level to debug to capture debug messages
+	originalLevel := logrus.GetLevel()
+	logrus.SetLevel(logrus.DebugLevel)
+	defer logrus.SetLevel(originalLevel)
+
+	// Redirect logrus output to a buffer
+	buf := &bytes.Buffer{}
+	originalOutput := logrus.StandardLogger().Out
+	logrus.SetOutput(buf)
+	defer logrus.SetOutput(originalOutput)
+
 	awsInstance := NewAWS(
 		config.AWSConfig{
 			AccessKey:       "AKIAIOSFODNN7EXAMPLE",
@@ -111,6 +163,12 @@ func TestNewAWSWithAPPRoleArn(t *testing.T) {
 
 	if awsInstance == nil || awsInstance.svc == nil {
 		t.Error("AWS instance is nil")
+	}
+
+	// Should log about using default credential provider chain, ignoring role ARN
+	logOutput := buf.String()
+	if !strings.Contains(logOutput, "Using AWS default credential provider chain") {
+		t.Errorf("Expected log message about using default credential provider chain, got: %s", logOutput)
 	}
 }
 

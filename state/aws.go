@@ -8,8 +8,6 @@ import (
 	"time"
 
 	aws_sdk "github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -41,21 +39,11 @@ func NewAWS(aws config.AWSConfig, bucket config.S3BucketConfig, noLocks, noVersi
 
 	sess := session.Must(session.NewSession())
 	awsConfig := aws_sdk.NewConfig()
-	var creds *credentials.Credentials
-	if len(aws.APPRoleArn) > 0 {
-		log.Debugf("Using %s role", aws.APPRoleArn)
-		creds = stscreds.NewCredentials(sess, aws.APPRoleArn, func(p *stscreds.AssumeRoleProvider) {
-			if aws.ExternalID != "" {
-				p.ExternalID = aws_sdk.String(aws.ExternalID)
-			}
-		})
-	} else {
-		if aws.AccessKey == "" || aws.SecretAccessKey == "" {
-			log.Fatal("Missing AccessKey or SecretAccessKey for AWS provider. Please check your configuration and retry")
-		}
-		creds = credentials.NewStaticCredentials(aws.AccessKey, aws.SecretAccessKey, aws.SessionToken)
-	}
-	awsConfig.WithCredentials(creds)
+	
+	// Always use AWS default credential provider chain
+	// This supports IRSA, EC2 instance profiles, environment variables, etc.
+	log.Debug("Using AWS default credential provider chain")
+	// Don't set explicit credentials, let AWS SDK use default credential provider chain
 
 	if e := aws.Endpoint; e != "" {
 		awsConfig.WithEndpoint(e)
