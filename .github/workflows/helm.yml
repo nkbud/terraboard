@@ -1,11 +1,9 @@
-name: Release Helm Chart
+name: Helm
 
 on:
   push:
     tags:
       - '*'
-    paths:
-      - 'helm/**'
 
 permissions:
   contents: read

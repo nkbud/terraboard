@@ -1,9 +1,9 @@
-name: Build a Docker image and publish it to GHCR
+name: Docker
 
 on:
   push:
     tags:
-    - '*'
+      - '*'
 
 jobs:
   build-and-push:
