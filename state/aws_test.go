@@ -60,7 +60,7 @@ func TestNewAWSNoBucket(t *testing.T) {
 	}
 }
 
-func TestNewAWSNoCredentials(t *testing.T) {
+func TestNewAWSWithDefaultCredentials(t *testing.T) {
 	// Set log level to debug to capture debug messages
 	originalLevel := logrus.GetLevel()
 	logrus.SetLevel(logrus.DebugLevel)
@@ -74,10 +74,8 @@ func TestNewAWSNoCredentials(t *testing.T) {
 
 	awsInstance := NewAWS(
 		config.AWSConfig{
-			AccessKey:       "",
-			SecretAccessKey: "",
-			Region:          "us-east-1",
-			Endpoint:        "http://localhost:8000",
+			Region:   "us-east-1",
+			Endpoint: "http://localhost:8000",
 		},
 		config.S3BucketConfig{
 			Bucket: "test",
@@ -98,7 +96,7 @@ func TestNewAWSNoCredentials(t *testing.T) {
 	}
 }
 
-func TestNewAWSWithStaticCredentials(t *testing.T) {
+func TestNewAWSWithStaticCredentialsStillUsesDefault(t *testing.T) {
 	// Set log level to debug to capture debug messages
 	originalLevel := logrus.GetLevel()
 	logrus.SetLevel(logrus.DebugLevel)
@@ -128,14 +126,25 @@ func TestNewAWSWithStaticCredentials(t *testing.T) {
 		t.Error("AWS instance is nil")
 	}
 
-	// Should log about using static credentials
+	// Should log about using default credential provider chain, not static credentials
 	logOutput := buf.String()
-	if !strings.Contains(logOutput, "Using static AWS credentials") {
-		t.Errorf("Expected log message about using static AWS credentials, got: %s", logOutput)
+	if !strings.Contains(logOutput, "Using AWS default credential provider chain") {
+		t.Errorf("Expected log message about using default credential provider chain, got: %s", logOutput)
 	}
 }
 
-func TestNewAWSWithAPPRoleArn(t *testing.T) {
+func TestNewAWSWithAPPRoleArnStillUsesDefault(t *testing.T) {
+	// Set log level to debug to capture debug messages
+	originalLevel := logrus.GetLevel()
+	logrus.SetLevel(logrus.DebugLevel)
+	defer logrus.SetLevel(originalLevel)
+
+	// Redirect logrus output to a buffer
+	buf := &bytes.Buffer{}
+	originalOutput := logrus.StandardLogger().Out
+	logrus.SetOutput(buf)
+	defer logrus.SetOutput(originalOutput)
+
 	awsInstance := NewAWS(
 		config.AWSConfig{
 			AccessKey:       "AKIAIOSFODNN7EXAMPLE",
@@ -154,6 +163,12 @@ func TestNewAWSWithAPPRoleArn(t *testing.T) {
 
 	if awsInstance == nil || awsInstance.svc == nil {
 		t.Error("AWS instance is nil")
+	}
+
+	// Should log about using default credential provider chain, ignoring role ARN
+	logOutput := buf.String()
+	if !strings.Contains(logOutput, "Using AWS default credential provider chain") {
+		t.Errorf("Expected log message about using default credential provider chain, got: %s", logOutput)
 	}
 }
 
