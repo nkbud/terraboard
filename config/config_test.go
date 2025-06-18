@@ -73,6 +73,16 @@ func TestLoadConfig(t *testing.T) {
 			Address: "https://gitlab.com",
 			Token:   "",
 		},
+		Kubernetes: KubernetesConfig{
+			SecretSuffix:           "tfstate",
+			Namespace:              "default",
+			Labels:                 nil,
+			ConfigPath:             "",
+			ConfigContext:          "",
+			ConfigContextAuthInfo:  "",
+			ConfigContextCluster:   "",
+			InClusterConfig:        false,
+		},
 		Web: WebConfig{
 			Port:        1234,
 			SwaggerPort: 8081,

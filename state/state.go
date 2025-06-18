@@ -88,5 +88,18 @@ func Configure(c *config.Config) ([]Provider, error) {
 		}
 	}
 
+	if len(c.Kubernetes) > 0 {
+		objs, err := NewKubernetesCollection(c)
+		if err != nil {
+			return []Provider{}, err
+		}
+		if len(objs) > 0 {
+			log.Info("Using Kubernetes as state/locks provider")
+			for _, k8sObj := range objs {
+				providers = append(providers, k8sObj)
+			}
+		}
+	}
+
 	return providers, nil
 }
