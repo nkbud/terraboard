@@ -27,6 +27,12 @@ jobs:
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username ${{ github.actor }} --password-stdin
 
+      - name: Update Chart.yaml with latest tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          sed -i "s/__VERSION__/$VERSION/g" helm/Chart.yaml
+          sed -i "s/__VERSION__/$VERSION/g" helm/values.yaml
+
       - name: Package and push Helm chart
         run: |
           helm package helm/
