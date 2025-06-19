@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 
 	tfversion "github.com/hashicorp/terraform/version"
 	"github.com/jessevdk/go-flags"
@@ -197,6 +198,27 @@ func LoadConfig(version string) *Config {
 			fmt.Printf("File %s doesn't exists!\n", c.ConfigFilePath)
 			os.Exit(1)
 		}
+	}
+
+	if dbHost := os.Getenv("DB_HOST"); dbHost != "" {
+		c.DB.Host = dbHost
+	}
+	if dbPort := os.Getenv("DB_PORT"); dbPort != "" {
+		if port, err := strconv.Atoi(dbPort); err == nil {
+			c.DB.Port = uint16(port)
+		}
+	}
+	if dbUser := os.Getenv("DB_USER"); dbUser != "" {
+		c.DB.User = dbUser
+	}
+	if dbPassword := os.Getenv("DB_PASSWORD"); dbPassword != "" {
+		c.DB.Password = dbPassword
+	}
+	if dbName := os.Getenv("DB_NAME"); dbName != "" {
+		c.DB.Name = dbName
+	}
+	if dbSSLMode := os.Getenv("DB_SSL_MODE"); dbSSLMode != "" {
+		c.DB.SSLMode = dbSSLMode
 	}
 
 	return &c
