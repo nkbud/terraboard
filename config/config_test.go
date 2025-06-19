@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -272,5 +273,71 @@ func TestSetLogging_wrongformat(t *testing.T) {
 
 	if err.Error() != expectedError {
 		t.Fatalf("Expected %s, got %s", expectedError, err.Error())
+	}
+}
+
+func TestDBEnvVarOverride(t *testing.T) {
+	// Create a temp config file
+	content := []byte(`
+database:
+  host: db-host-from-yaml
+  port: 1234
+  user: user-from-yaml
+  password: password-from-yaml
+  name: db-name-from-yaml
+  sslmode: "disable"
+`)
+	tmpfile, err := ioutil.TempFile("", "testconfig.*.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	if _, err := tmpfile.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Set env vars to override
+	os.Setenv("DB_HOST", "db-host-from-env")
+	os.Setenv("DB_PORT", "5432")
+	os.Setenv("DB_USER", "user-from-env")
+	os.Setenv("DB_PASSWORD", "password-from-env")
+	os.Setenv("DB_NAME", "db-name-from-env")
+	os.Setenv("DB_SSL_MODE", "require")
+
+	defer os.Unsetenv("DB_HOST")
+	defer os.Unsetenv("DB_PORT")
+	defer os.Unsetenv("DB_USER")
+	defer os.Unsetenv("DB_PASSWORD")
+	defer os.Unsetenv("DB_NAME")
+	defer os.Unsetenv("DB_SSL_MODE")
+
+	// Manipulate os.Args to point to the temp config file
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+	os.Args = []string{"cmd", "--config-file", tmpfile.Name()}
+
+	config := LoadConfig("test-version")
+
+	if config.DB.Host != "db-host-from-env" {
+		t.Errorf("Expected DB.Host 'db-host-from-env', got '%s'", config.DB.Host)
+	}
+	if config.DB.Port != 5432 {
+		t.Errorf("Expected DB.Port 5432, got '%d'", config.DB.Port)
+	}
+	if config.DB.User != "user-from-env" {
+		t.Errorf("Expected DB.User 'user-from-env', got '%s'", config.DB.User)
+	}
+	if config.DB.Password != "password-from-env" {
+		t.Errorf("Expected DB.Password 'password-from-env', got '%s'", config.DB.Password)
+	}
+	if config.DB.Name != "db-name-from-env" {
+		t.Errorf("Expected DB.Name 'db-name-from-env', got '%s'", config.DB.Name)
+	}
+	if config.DB.SSLMode != "require" {
+		t.Errorf("Expected DB.SSLMode 'require', got '%s'", config.DB.SSLMode)
 	}
 }
