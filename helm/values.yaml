@@ -127,4 +127,4 @@ db:
   name: ""
   user: ""
   password: ""
-  sslmode: "require"
+  sslmode: "disabled"

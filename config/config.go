@@ -217,7 +217,7 @@ func LoadConfig(version string) *Config {
 	if dbName := os.Getenv("DB_NAME"); dbName != "" {
 		c.DB.Name = dbName
 	}
-	if dbSSLMode := os.Getenv("DB_SSL_MODE"); dbSSLMode != "" {
+	if dbSSLMode := os.Getenv("DB_SSLMODE"); dbSSLMode != "" {
 		c.DB.SSLMode = dbSSLMode
 	}
 
