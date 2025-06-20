@@ -73,8 +73,9 @@ func TestMarshalAttributeValues(t *testing.T) {
 			},
 			[]types.Attribute{
 				{
-					Key:   "ami",
-					Value: "\"bar\"",
+					Key:       "ami",
+					Value:     "\"bar\"",
+					Sensitive: false,
 				},
 			},
 		},
@@ -97,8 +98,34 @@ func TestMarshalAttributeValues(t *testing.T) {
 			},
 			[]types.Attribute{
 				{
-					Key:   "ami",
-					Value: "\"bar\"",
+					Key:       "ami",
+					Value:     "\"bar\"",
+					Sensitive: false,
+				},
+			},
+		},
+		{
+			"With sensitive attribute",
+			&states.ResourceInstanceObjectSrc{
+				AttrsJSON: []byte(`{"secret":"secretvalue","public":"publicvalue"}`),
+				AttrSensitivePaths: []cty.PathValueMarks{
+					{
+						Path:  cty.Path{cty.GetAttrStep{Name: "secret"}},
+						Marks: cty.NewValueMarks("sensitive"),
+					},
+				},
+				Status: states.ObjectReady,
+			},
+			[]types.Attribute{
+				{
+					Key:       "public",
+					Value:     "\"publicvalue\"",
+					Sensitive: false,
+				},
+				{
+					Key:       "secret",
+					Value:     "\"secretvalue\"",
+					Sensitive: true,
 				},
 			},
 		},
@@ -107,12 +134,38 @@ func TestMarshalAttributeValues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := marshalAttributeValues(tt.args)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf(
-					"TestMarshalAttributeValues() -> \n\ngot:\n%v,\n\nwant:\n%v",
-					got,
-					tt.want,
-				)
+			
+			// For the sensitive attribute test, check individual attributes since map iteration order is not guaranteed
+			if tt.name == "With sensitive attribute" {
+				assert.Equal(t, 2, len(got))
+				
+				// Find the secret and public attributes
+				var secretAttr, publicAttr types.Attribute
+				var foundSecret, foundPublic bool
+				for _, attr := range got {
+					if attr.Key == "secret" {
+						secretAttr = attr
+						foundSecret = true
+					} else if attr.Key == "public" {
+						publicAttr = attr
+						foundPublic = true
+					}
+				}
+				
+				assert.True(t, foundSecret)
+				assert.True(t, foundPublic)
+				assert.True(t, secretAttr.Sensitive)
+				assert.False(t, publicAttr.Sensitive)
+				assert.Equal(t, "\"secretvalue\"", secretAttr.Value)
+				assert.Equal(t, "\"publicvalue\"", publicAttr.Value)
+			} else {
+				if !reflect.DeepEqual(got, tt.want) {
+					t.Errorf(
+						"TestMarshalAttributeValues() -> \n\ngot:\n%v,\n\nwant:\n%v",
+						got,
+						tt.want,
+					)
+				}
 			}
 		})
 	}
@@ -167,7 +220,7 @@ func TestInsertState(t *testing.T) {
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectQuery("^INSERT (.+)").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectQuery("^INSERT (.+)").
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),

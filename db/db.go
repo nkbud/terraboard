@@ -17,6 +17,7 @@ import (
 	"github.com/camptocamp/terraboard/types"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/zclconf/go-cty/cty"
 	ctyJson "github.com/zclconf/go-cty/cty/json"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -183,6 +184,21 @@ func getResourceIndex(index addrs.InstanceKey) string {
 	return ""
 }
 
+// isAttributeSensitive checks if an attribute key matches any sensitive path
+func isAttributeSensitive(attrKey string, sensitivePaths []cty.PathValueMarks) bool {
+	for _, pathMark := range sensitivePaths {
+		// Check if the path directly references this attribute
+		if len(pathMark.Path) == 1 {
+			if step, ok := pathMark.Path[0].(cty.GetAttrStep); ok {
+				if step.Name == attrKey {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func marshalAttributeValues(src *states.ResourceInstanceObjectSrc) (attrs []types.Attribute) {
 	vals := make(attributeValues)
 	if src == nil {
@@ -199,9 +215,11 @@ func marshalAttributeValues(src *states.ResourceInstanceObjectSrc) (attrs []type
 
 	for k, v := range vals {
 		vJSON, _ := json.Marshal(v)
+		sensitive := isAttributeSensitive(k, src.AttrSensitivePaths)
 		attr := types.Attribute{
-			Key:   k,
-			Value: string(vJSON),
+			Key:       k,
+			Value:     string(vJSON),
+			Sensitive: sensitive,
 		}
 		log.Debug(attrs)
 		attrs = append(attrs, attr)
