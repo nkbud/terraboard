@@ -199,6 +199,11 @@ func isAttributeSensitive(attrKey string, sensitivePaths []cty.PathValueMarks) b
 	return false
 }
 
+// MarshalAttributeValues is a public wrapper for testing purposes
+func MarshalAttributeValues(src *states.ResourceInstanceObjectSrc) []types.Attribute {
+	return marshalAttributeValues(src)
+}
+
 func marshalAttributeValues(src *states.ResourceInstanceObjectSrc) (attrs []types.Attribute) {
 	vals := make(attributeValues)
 	if src == nil {
