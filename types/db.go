@@ -74,6 +74,7 @@ type Attribute struct {
 	ResourceID sql.NullInt64 `gorm:"index" json:"-"`
 	Key        string        `gorm:"index" json:"key"`
 	Value      string        `json:"value"`
+	Sensitive  bool          `gorm:"index" json:"sensitive"`
 }
 
 // Plan is a Terraform plan

@@ -6,7 +6,20 @@
     </h3>
     <div class="panel-group">
       <div class="card">
-        <h4 class="card-header">Attributes</h4>
+        <h4 class="card-header">
+          Attributes
+          <div class="float-end">
+            <label class="form-check-label me-2" for="redactSensitiveToggle">
+              Hide sensitive values
+            </label>
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="redactSensitiveToggle"
+              v-model="redactSensitive"
+            />
+          </div>
+        </h4>
         <table class="table">
           <thead>
             <th>Attribute</th>
@@ -15,7 +28,7 @@
           <tbody>
             <tr v-for="attr in sortedAttributes" v-bind:key="attr">
               <td class="attr-key">{{ attr.key }}</td>
-              <td class="attr-val">{{ attr.value }}</td>
+              <td class="attr-val">{{ displayValue(attr) }}</td>
             </tr>
           </tbody>
         </table>
@@ -31,6 +44,11 @@ import { Options, Vue } from "vue-class-component";
   props: {
     resource: {},
   },
+  data() {
+    return {
+      redactSensitive: true, // Default to redacting sensitive values
+    };
+  },
   computed: {
     sortedAttributes() {
       if (this.resource.attributes !== undefined) {
@@ -38,6 +56,14 @@ import { Options, Vue } from "vue-class-component";
           return a.key.localeCompare(b.key);
         });
       }
+    },
+  },
+  methods: {
+    displayValue(attr: any): string {
+      if (this.redactSensitive && attr.sensitive) {
+        return "(sensitive value)";
+      }
+      return attr.value;
     },
   },
 })
