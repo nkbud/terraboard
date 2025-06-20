@@ -4,3 +4,4 @@ terraboard
 dist/
 coverage.out
 .vscode/
+docker-compose.sh

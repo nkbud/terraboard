@@ -200,6 +200,17 @@ func LoadConfig(version string) *Config {
 		}
 	}
 
+	// Provider Config
+
+	if providerNoVersioning := os.Getenv("TERRABOARD_NO_VERSIONING"); providerNoVersioning != "" {
+		c.Provider.NoVersioning = true
+	}
+	if providerNoLocks := os.Getenv("TERRABOARD_NO_LOCKS"); providerNoLocks != "" {
+		c.Provider.NoLocks = true
+	}
+
+	// DB Config
+
 	if dbHost := os.Getenv("DB_HOST"); dbHost != "" {
 		c.DB.Host = dbHost
 	}
@@ -219,6 +230,21 @@ func LoadConfig(version string) *Config {
 	}
 	if dbSSLMode := os.Getenv("DB_SSLMODE"); dbSSLMode != "" {
 		c.DB.SSLMode = dbSSLMode
+	}
+
+	// AWS Config
+
+	if awsRegion := os.Getenv("AWS_REGION"); awsRegion != "" {
+		c.AWS[0].Region = awsRegion
+	}
+	if awsBucket := os.Getenv("AWS_BUCKET"); awsBucket != "" {
+		c.AWS[0].S3[0].Bucket = awsBucket
+	}
+	if awsFileExtension := os.Getenv("AWS_FILE_EXTENSION"); awsFileExtension != "" {
+		c.AWS[0].S3[0].FileExtension = []string{awsFileExtension}
+	}
+	if awsDynamoDBTable := os.Getenv("AWS_DYNAMODB_TABLE"); awsDynamoDBTable != "" {
+		c.AWS[0].DynamoDBTable = awsDynamoDBTable
 	}
 
 	return &c

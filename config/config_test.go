@@ -306,14 +306,14 @@ database:
 	os.Setenv("DB_USER", "user-from-env")
 	os.Setenv("DB_PASSWORD", "password-from-env")
 	os.Setenv("DB_NAME", "db-name-from-env")
-	os.Setenv("DB_SSL_MODE", "require")
+	os.Setenv("DB_SSLMODE", "require")
 
 	defer os.Unsetenv("DB_HOST")
 	defer os.Unsetenv("DB_PORT")
 	defer os.Unsetenv("DB_USER")
 	defer os.Unsetenv("DB_PASSWORD")
 	defer os.Unsetenv("DB_NAME")
-	defer os.Unsetenv("DB_SSL_MODE")
+	defer os.Unsetenv("DB_SSLMODE")
 
 	// Manipulate os.Args to point to the temp config file
 	oldArgs := os.Args
