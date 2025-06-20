@@ -524,6 +524,34 @@ $ docker-compose build && docker-compose up -d
 # Point your browser to http://localhost
 ```
 
+Environment Setup:
+```bash
+# AWS Choices
+export AWS_PROFILE="YOUR PROFILE"
+export AWS_ROLE_ARN="YOUR ROLE ARN"
+export AWS_REGION="YOUR REGION"     
+export AWS_BUCKET="YOUR S3 BUCKET"
+
+# App Choices
+export TERRABOARD_NO_VERSIONING="true"
+export TERRABOARD_NO_LOCKS="true"
+
+# Get temporary credentials
+response=$(aws --profile=${AWS_PROFILE} sts assume-role \                                               
+  --role-arn ${AWS_ROLE_ARN} \
+  --role-session-name mysession \      
+  --output json)        
+  
+export AWS_ACCESS_KEY_ID=$(echo "$response" | jq -r '.Credentials.AccessKeyId')
+export AWS_SECRET_ACCESS_KEY=$(echo "$response" | jq -r '.Credentials.SecretAccessKey')
+export AWS_SESSION_TOKEN=$(echo "$response" | jq -r '.Credentials.SessionToken')
+```
+
+Run it:
+```
+docker compose up 
+```
+
 ### Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md)
