@@ -234,6 +234,12 @@ func LoadConfig(version string) *Config {
 
 	// AWS Config
 
+	if len(c.AWS) == 0 {
+		c.AWS = append(c.AWS, AWSConfig{})
+	}
+	if len(c.AWS[0].S3) == 0 {
+		c.AWS[0].S3 = append(c.AWS[0].S3, S3BucketConfig{})
+	}
 	if awsRegion := os.Getenv("AWS_REGION"); awsRegion != "" {
 		c.AWS[0].Region = awsRegion
 	}
