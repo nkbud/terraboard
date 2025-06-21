@@ -5,6 +5,7 @@ import State from '../views/State.vue'
 import Plan from '../views/Plan.vue'
 import Search from '../views/Search.vue'
 import PlansExplorer from '../views/PlansExplorer.vue'
+import Callback from '../components/Callback.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -36,6 +37,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/plans',
     name: 'PlansExplorer',
     component: PlansExplorer
+  },
+  {
+    path: '/callback',
+    name: 'Callback',
+    component: Callback
   },
   {
     path: "/:catchAll(.*)",

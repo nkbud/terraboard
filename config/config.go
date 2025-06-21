@@ -99,10 +99,20 @@ type GitlabConfig struct {
 
 // WebConfig stores the UI interface parameters
 type WebConfig struct {
-	Port        uint16 `short:"p" long:"port" env:"TERRABOARD_PORT" yaml:"port" description:"Port to listen on." default:"8080"`
-	SwaggerPort uint16 `long:"swagger-port" env:"TERRABOARD_SWAGGER_PORT" yaml:"swagger-port" description:"Port for swagger to listen on." default:"8081"`
-	BaseURL     string `long:"base-url" env:"TERRABOARD_BASE_URL" yaml:"base-url" description:"Base URL." default:"/"`
-	LogoutURL   string `long:"logout-url" env:"TERRABOARD_LOGOUT_URL" yaml:"logout-url" description:"Logout URL."`
+	Port        uint16     `short:"p" long:"port" env:"TERRABOARD_PORT" yaml:"port" description:"Port to listen on." default:"8080"`
+	SwaggerPort uint16     `long:"swagger-port" env:"TERRABOARD_SWAGGER_PORT" yaml:"swagger-port" description:"Port for swagger to listen on." default:"8081"`
+	BaseURL     string     `long:"base-url" env:"TERRABOARD_BASE_URL" yaml:"base-url" description:"Base URL." default:"/"`
+	LogoutURL   string     `long:"logout-url" env:"TERRABOARD_LOGOUT_URL" yaml:"logout-url" description:"Logout URL."`
+	OIDC        OIDCConfig `group:"OIDC Options" yaml:"oidc"`
+}
+
+// OIDCConfig stores the OIDC configuration for Dex authentication
+type OIDCConfig struct {
+	Enabled      bool   `long:"oidc-enabled" env:"TERRABOARD_OIDC_ENABLED" yaml:"enabled" description:"Enable OIDC authentication."`
+	IssuerURL    string `long:"oidc-issuer-url" env:"TERRABOARD_OIDC_ISSUER_URL" yaml:"issuer-url" description:"OIDC Issuer URL (Dex server URL)."`
+	ClientID     string `long:"oidc-client-id" env:"TERRABOARD_OIDC_CLIENT_ID" yaml:"client-id" description:"OIDC Client ID."`
+	ClientSecret string `long:"oidc-client-secret" env:"TERRABOARD_OIDC_CLIENT_SECRET" yaml:"client-secret" description:"OIDC Client Secret."`
+	RedirectURL  string `long:"oidc-redirect-url" env:"TERRABOARD_OIDC_REDIRECT_URL" yaml:"redirect-url" description:"OIDC Redirect URL (callback URL)."`
 }
 
 // ProviderConfig stores genral provider parameters
