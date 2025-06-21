@@ -67,7 +67,8 @@
               >
                 <li><a class="dropdown-item" href="#">Logged in as {{user.name}}</a></li>
                 <li>
-                  <a class="dropdown-item" href="/oauth2/sign_in">Sign out</a>
+                  <a v-if="user.is_oidc" class="dropdown-item" href="#" @click="logout">Sign out</a>
+                  <a v-else class="dropdown-item" href="/oauth2/sign_in">Sign out</a>
                 </li>
               </ul>
             </li>
@@ -148,6 +149,18 @@ import router from "../router";
         .then(function () {
           // always executed
         });
+    },
+    
+    async logout() {
+      try {
+        await axios.post('/auth/logout');
+        // Redirect to home page, which will show login screen
+        window.location.href = '/';
+      } catch (error) {
+        console.error('Logout failed:', error);
+        // Fallback: still redirect to home
+        window.location.href = '/';
+      }
     }
   },
   created() {

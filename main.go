@@ -204,6 +204,13 @@ func main() {
 	apiRouter.HandleFunc(util.GetFullPath("plans"), handleWithDB(api.ManagePlans, database))
 	apiRouter.HandleFunc(util.GetFullPath("plans/summary"), handleWithDB(api.GetPlansSummary, database))
 
+	// Handle OIDC endpoints
+	authRouter := r.PathPrefix("/auth/").Subrouter()
+	authRouter.HandleFunc(util.GetFullPath("login"), api.OIDCLogin).Methods("GET")
+	authRouter.HandleFunc(util.GetFullPath("callback"), api.OIDCCallback).Methods("GET")
+	authRouter.HandleFunc(util.GetFullPath("logout"), api.OIDCLogout).Methods("POST")
+	authRouter.HandleFunc(util.GetFullPath("status"), api.OIDCStatus).Methods("GET")
+
 	// Handle swagger files
 	swaggerRouter := mux.NewRouter()
 	swaggerRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

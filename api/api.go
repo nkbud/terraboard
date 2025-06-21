@@ -351,10 +351,33 @@ func ListTfVersions(w http.ResponseWriter, _ *http.Request, d *db.Database) {
 // @Success 200 {string} string	"ok"
 // @Router /user [get]
 func GetUser(w http.ResponseWriter, r *http.Request) {
-	name := r.Header.Get("X-Forwarded-User")
-	email := r.Header.Get("X-Forwarded-Email")
+	var user auth.User
 
-	user := auth.UserInfo(name, email)
+	// Check if OIDC is enabled and user has a token
+	if auth.IsOIDCEnabled() {
+		token, err := auth.GetTokenFromCookie(r)
+		if err == nil && token != "" {
+			// TODO: In a full implementation, we would validate the token and extract user info
+			// For now, we'll use a placeholder user
+			user = auth.User{
+				Name:          "OIDC User",
+				LogoutURL:     "/auth/logout",
+				IsOIDC:        true,
+				Authenticated: true,
+			}
+		} else {
+			// No valid OIDC token, return unauthenticated user
+			user = auth.User{
+				IsOIDC:        true,
+				Authenticated: false,
+			}
+		}
+	} else {
+		// Fall back to proxy-based authentication
+		name := r.Header.Get("X-Forwarded-User")
+		email := r.Header.Get("X-Forwarded-Email")
+		user = auth.UserInfo(name, email)
+	}
 
 	j, err := json.Marshal(user)
 	if err != nil {
