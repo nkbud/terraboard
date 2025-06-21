@@ -1,0 +1,38 @@
+# Example Terraboard configuration with OIDC authentication
+
+# Database configuration
+database:
+  host: "localhost"
+  port: 5432
+  user: "terraboard"
+  password: "password"
+  name: "terraboard"
+  sslmode: "disable"
+
+# Web interface configuration
+web:
+  port: 8080
+  base-url: "/"
+  # OIDC configuration for Dex authentication
+  oidc:
+    enabled: true
+    issuer-url: "https://kubedex.cicd.nisc.cloud"
+    client-id: "terraboard-ui"
+    client-secret: "your-client-secret-here"
+    redirect-url: "https://your-terraboard-ui-url/callback"
+
+# Example AWS configuration
+aws:
+  - access-key: "your-access-key"
+    secret-access-key: "your-secret-key"
+    region: "us-east-1"
+    s3:
+      - bucket: "your-terraform-state-bucket"
+        key-prefix: "terraform/"
+        file-extension: [".tfstate"]
+    dynamodb-table: "terraform-locks"
+
+# Logging configuration
+log:
+  level: "info"
+  format: "plain"

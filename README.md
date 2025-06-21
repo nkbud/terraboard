@@ -444,8 +444,34 @@ contains a Terraboard template to automate its installation in Cattle.
 
 ## Authentication and base URL
 
-Terraboard does not implement authentication. Instead, it is recommended to use
-an authentication proxy such as [oauth2_proxy](https://github.com/bitly/oauth2_proxy).
+Terraboard supports two authentication methods:
+
+### 1. OIDC Authentication (New)
+
+Terraboard now supports OIDC authentication using Kubernetes Dex or other OIDC providers. This provides a complete login experience without requiring external proxy services.
+
+**Configuration:**
+```yaml
+web:
+  oidc:
+    enabled: true
+    issuer-url: "https://your-dex-server.example.com"
+    client-id: "terraboard-ui"
+    client-secret: "your-client-secret"
+    redirect-url: "https://your-terraboard-url.example.com/callback"
+```
+
+**Features:**
+- Login screen with OIDC authentication
+- Secure token-based authentication
+- Proper logout functionality
+- Support for various OIDC providers through Dex
+
+See [OIDC Authentication Guide](docs/OIDC.md) for detailed setup instructions.
+
+### 2. Proxy-based Authentication (Legacy)
+
+Terraboard can use an authentication proxy such as [oauth2_proxy](https://github.com/bitly/oauth2_proxy).
 
 If you need to set a route path for Terraboard, you can set a base URL by
 passing it as the `BASE_URL` environment variable.
