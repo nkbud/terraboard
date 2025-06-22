@@ -13,6 +13,7 @@
               Hide sensitive values
             </label>
             <input 
+              disabled
               class="form-check-input" 
               type="checkbox" 
               id="redactSensitiveToggle"

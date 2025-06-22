@@ -15,6 +15,7 @@ services:
       DB_USER: gorm
       DB_PASSWORD: mypassword
       DB_SSLMODE: disable
+      TERRABOARD_STATIC_DIR: /static
       TERRABOARD_NO_VERSIONING: true
       TERRABOARD_NO_LOCKS: true
       GODEBUG: netdns=go

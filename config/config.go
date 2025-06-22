@@ -103,6 +103,7 @@ type WebConfig struct {
 	SwaggerPort uint16 `long:"swagger-port" env:"TERRABOARD_SWAGGER_PORT" yaml:"swagger-port" description:"Port for swagger to listen on." default:"8081"`
 	BaseURL     string `long:"base-url" env:"TERRABOARD_BASE_URL" yaml:"base-url" description:"Base URL." default:"/"`
 	LogoutURL   string `long:"logout-url" env:"TERRABOARD_LOGOUT_URL" yaml:"logout-url" description:"Logout URL."`
+	StaticDir   string `long:"static-dir" env:"TERRABOARD_STATIC_DIR" yaml:"static-dir" description:"Static assets directory." default:"static/terraboard-vuejs/dist"`
 }
 
 // ProviderConfig stores genral provider parameters
