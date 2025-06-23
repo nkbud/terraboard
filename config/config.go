@@ -103,7 +103,7 @@ type WebConfig struct {
 	SwaggerPort uint16 `long:"swagger-port" env:"TERRABOARD_SWAGGER_PORT" yaml:"swagger-port" description:"Port for swagger to listen on." default:"8081"`
 	BaseURL     string `long:"base-url" env:"TERRABOARD_BASE_URL" yaml:"base-url" description:"Base URL." default:"/"`
 	LogoutURL   string `long:"logout-url" env:"TERRABOARD_LOGOUT_URL" yaml:"logout-url" description:"Logout URL."`
-	StaticDir   string `long:"static-dir" env:"TERRABOARD_STATIC_DIR" yaml:"static-dir" description:"Static assets directory." default:"static/terraboard-vuejs/dist"`
+	StaticDir   string `long:"static-dir" env:"TERRABOARD_STATIC_DIR" yaml:"static-dir" description:"Static assets directory." default:"/static"`
 }
 
 // ProviderConfig stores genral provider parameters
@@ -217,6 +217,9 @@ func LoadConfig(version string) *Config {
 			c.Provider.NoLocks = true
 		}
 	}
+	if staticDir := os.Getenv("TERRABOARD_STATIC_DIR"); staticDir != "" {
+		c.Web.StaticDir = staticDir
+	}
 
 	// DB Config
 
@@ -240,7 +243,7 @@ func LoadConfig(version string) *Config {
 	if dbSSLMode := os.Getenv("DB_SSLMODE"); dbSSLMode != "" {
 		c.DB.SSLMode = dbSSLMode
 	}
-	if dbSyncInterval := os.Getenv("DB_SYNC_MINUTES"); dbSyncInterval != "" {
+	if dbSyncInterval := os.Getenv("DB_SYNC_INTERVAL"); dbSyncInterval != "" {
 		if syncInterval, err := strconv.Atoi(dbSyncInterval); err == nil {
 			c.DB.SyncInterval = uint16(syncInterval)
 		}
