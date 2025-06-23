@@ -86,7 +86,6 @@ spec:
               value: {{ .Values.aws.dynamodb_table }}
             - name: AWS_FILE_EXTENSION
               value: {{ .Values.aws.file_extension }}
-
             {{- with .Values.additionalEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
