@@ -17,6 +17,7 @@ import (
 	"github.com/camptocamp/terraboard/types"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/zclconf/go-cty/cty"
 	ctyJson "github.com/zclconf/go-cty/cty/json"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -183,6 +184,26 @@ func getResourceIndex(index addrs.InstanceKey) string {
 	return ""
 }
 
+// isAttributeSensitive checks if an attribute key matches any sensitive path
+func isAttributeSensitive(attrKey string, sensitivePaths []cty.PathValueMarks) bool {
+	for _, pathMark := range sensitivePaths {
+		// Check if the path directly references this attribute
+		if len(pathMark.Path) == 1 {
+			if step, ok := pathMark.Path[0].(cty.GetAttrStep); ok {
+				if step.Name == attrKey {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// MarshalAttributeValues is a public wrapper for testing purposes
+func MarshalAttributeValues(src *states.ResourceInstanceObjectSrc) []types.Attribute {
+	return marshalAttributeValues(src)
+}
+
 func marshalAttributeValues(src *states.ResourceInstanceObjectSrc) (attrs []types.Attribute) {
 	vals := make(attributeValues)
 	if src == nil {
@@ -199,9 +220,11 @@ func marshalAttributeValues(src *states.ResourceInstanceObjectSrc) (attrs []type
 
 	for k, v := range vals {
 		vJSON, _ := json.Marshal(v)
+		sensitive := isAttributeSensitive(k, src.AttrSensitivePaths)
 		attr := types.Attribute{
-			Key:   k,
-			Value: string(vJSON),
+			Key:       k,
+			Value:     string(vJSON),
+			Sensitive: sensitive,
 		}
 		log.Debug(attrs)
 		attrs = append(attrs, attr)
@@ -212,10 +235,42 @@ func marshalAttributeValues(src *states.ResourceInstanceObjectSrc) (attrs []type
 // InsertState inserts a Terraform State in the Database
 func (db *Database) InsertState(path string, versionID string, sf *statefile.File) error {
 	st, err := db.stateS3toDB(sf, path, versionID)
-	if err == nil {
-		db.Create(&st)
+	if err != nil {
+		return err
 	}
-	return nil
+
+	// Extract modules to insert them one by one to avoid parameter limit
+	modules := st.Modules
+	st.Modules = nil
+
+	// Use a transaction to insert the state and all its modules
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Error; err != nil {
+		return err
+	}
+
+	// Create the state object without modules
+	if err := tx.Create(&st).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Insert modules one by one
+	for i := range modules {
+		modules[i].StateID = sql.NullInt64{Int64: int64(st.ID), Valid: true}
+		if err := tx.Create(&modules[i]).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit().Error
 }
 
 // UpdateState update a Terraform State in the Database with Lineage foreign constraint
@@ -391,7 +446,7 @@ func (db *Database) SearchAttribute(query url.Values) (results []types.SearchRes
 
 	// Now get results
 	// gorm doesn't support subqueries...
-	sql := "SELECT states.path, versions.version_id, states.tf_version, states.serial, lineages.value as lineage_value, modules.path as module_path, resources.type, resources.name, resources.index, attributes.key, attributes.value" +
+	sql := "SELECT states.path, versions.version_id, states.tf_version, states.serial, lineages.value as lineage_value, modules.path as module_path, resources.type, resources.name, resources.index, attributes.key, attributes.value, attributes.sensitive" +
 		sqlQuery +
 		" ORDER BY states.path, states.serial, lineage_value, modules.path, resources.type, resources.name, resources.index, attributes.key" +
 		" LIMIT ?"
