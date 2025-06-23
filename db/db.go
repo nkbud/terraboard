@@ -255,18 +255,36 @@ func (db *Database) InsertState(path string, versionID string, sf *statefile.Fil
 		return err
 	}
 
-	// Create the state object without modules
 	if err := tx.Create(&st).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Insert modules one by one
-	for i := range modules {
-		modules[i].StateID = sql.NullInt64{Int64: int64(st.ID), Valid: true}
-		if err := tx.Create(&modules[i]).Error; err != nil {
+	for _, m := range modules {
+		m.StateID = sql.NullInt64{Int64: int64(st.ID), Valid: true}
+		resources := m.Resources
+		m.Resources = nil
+		outputs := m.OutputValues
+		m.OutputValues = nil
+		if err := tx.Create(&m).Error; err != nil {
 			tx.Rollback()
 			return err
+		}
+
+		for _, r := range resources {
+			r.ModuleID = sql.NullInt64{Int64: int64(m.ID), Valid: true}
+			if err := tx.Create(&r).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+
+		for _, o := range outputs {
+			o.ModuleID = sql.NullInt64{Int64: int64(m.ID), Valid: true}
+			if err := tx.Create(&o).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
 		}
 	}
 
