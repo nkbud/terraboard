@@ -71,13 +71,14 @@ func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (stri
 				logrus.WithContext(ctx).Error(utils.FileWithLineNum(), err, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 			}
 		case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= logger.Warn:
-			sql, rows := fc()
-			slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
-			if rows == -1 {
-				logrus.WithContext(ctx).Warn(utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, "-", sql)
-			} else {
-				logrus.WithContext(ctx).Warn(utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, rows, sql)
-			}
+			logrus.WithContext(ctx).Warn(utils.FileWithLineNum(), fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold), float64(elapsed.Nanoseconds())/1e6)
+			// sql, rows := fc()
+			// slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
+			// if rows == -1 {
+			// 	logrus.WithContext(ctx).Warn(utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			// } else {
+			// 	logrus.WithContext(ctx).Warn(utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			// }
 		case l.LogLevel >= logger.Info:
 			sql, rows := fc()
 			if rows == -1 {

@@ -21,6 +21,7 @@ type SearchResult struct {
 	ResourceIndex  string `gorm:"column:index" json:"resource_index"`
 	AttributeKey   string `gorm:"column:key" json:"attribute_key"`
 	AttributeValue string `gorm:"column:value" json:"attribute_value"`
+	Sensitive      bool   `gorm:"column:sensitive" json:"sensitive"`
 }
 
 // StateStat stores State stats

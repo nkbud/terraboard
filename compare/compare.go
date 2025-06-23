@@ -75,21 +75,29 @@ func resourceAttributes(res types.Resource) (attrs []string) {
 	return
 }
 
-func getResourceAttribute(res types.Resource, key string) (val string, err error) {
-	for _, attr := range res.Attributes {
-		if attr.Key == key {
-			return attr.Value, nil
+func getResourceAttribute(res types.Resource, key string) (attr types.Attribute, err error) {
+	for _, a := range res.Attributes {
+		if a.Key == key {
+			return a, nil
 		}
 	}
-	return "", fmt.Errorf("Could not find attribute %s for resource %s.%s", key, res.Type, res.Name)
+	return attr, fmt.Errorf("could not find attribute %s for resource %s.%s", key, res.Type, res.Name)
 }
 
 // TODO: use terraform/command/format.State()
 func formatResource(res types.Resource) (out string) {
 	out = fmt.Sprintf("resource \"%s\" \"%s\" {\n", res.Type, res.Name)
-	for _, attr := range resourceAttributes(res) {
-		a, _ := getResourceAttribute(res, attr) // TODO: err
-		out += fmt.Sprintf("  %s = \"%s\"\n", attr, a)
+	for _, attrKey := range resourceAttributes(res) {
+		attr, _ := getResourceAttribute(res, attrKey) // TODO: err
+		if attr.Sensitive {
+			if attr.Value == "null" {
+				out += fmt.Sprintf("  %s = (null)\n", attr.Key)
+			} else {
+				out += fmt.Sprintf("  %s = (%d)\n", attr.Key, len(attr.Value))
+			}
+		} else {
+			out += fmt.Sprintf("  %s = %s\n", attr.Key, attr.Value)
+		}
 	}
 	out += "}\n"
 
@@ -109,16 +117,32 @@ func compareResource(st1, st2 types.State, key string) (comp types.ResourceDiff)
 
 	// Only in old
 	comp.OnlyInOld = make(map[string]string)
-	for _, attr := range sliceDiff(attrs1, attrs2) {
-		a, _ := getResourceAttribute(res1, attr) // TODO: err
-		comp.OnlyInOld[attr] = a
+	for _, attrKey := range sliceDiff(attrs1, attrs2) {
+		attr, _ := getResourceAttribute(res1, attrKey) // TODO: err
+		if attr.Sensitive {
+			if attr.Value == "null" {
+				comp.OnlyInOld[attr.Key] = "(null)"
+			} else {
+				comp.OnlyInOld[attr.Key] = fmt.Sprintf("(%d)", len(attr.Value))
+			}
+		} else {
+			comp.OnlyInOld[attr.Key] = attr.Value
+		}
 	}
 
 	// Only in new
 	comp.OnlyInNew = make(map[string]string)
-	for _, attr := range sliceDiff(attrs2, attrs1) {
-		a, _ := getResourceAttribute(res2, attr) // TODO: err
-		comp.OnlyInNew[attr] = a
+	for _, attrKey := range sliceDiff(attrs2, attrs1) {
+		attr, _ := getResourceAttribute(res2, attrKey) // TODO: err
+		if attr.Sensitive {
+			if attr.Value == "null" {
+				comp.OnlyInNew[attr.Key] = "(null)"
+			} else {
+				comp.OnlyInNew[attr.Key] = fmt.Sprintf("(%d)", len(attr.Value))
+			}
+		} else {
+			comp.OnlyInNew[attr.Key] = attr.Value
+		}
 	}
 
 	// Compute unified diff

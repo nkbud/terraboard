@@ -115,7 +115,7 @@
             {{ r.resource_type }}.{{ r.resource_name }}{{ r.resource_index }}
           </td>
           <td>{{ r.attribute_key }}</td>
-          <td class="attr-val">{{ r.attribute_value }}</td>
+          <td class="attr-val">{{ this.displayValue(r) }}</td>
         </tr>
       </tbody>
     </table>
@@ -160,9 +160,19 @@ import router from "../router";
         itemsPerPage: 20,
       },
       results: {},
+      redactSensitive: true,
     };
   },
   methods: {
+    displayValue(r: any): string {
+      if (this.redactSensitive && r.sensitive) {
+        if (r.attribute_value == "null") {
+          return "(null)";
+        }
+        return "(" + r.attribute_value.length + ")";
+      }
+      return r.attribute_value;
+    },
     clearTfVersion() {
       this.search.tf_version = null;
       this.doSearch();

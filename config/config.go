@@ -53,7 +53,7 @@ type DBConfig struct {
 	Name         string `long:"db-name" env:"DB_NAME" yaml:"name" description:"Database name." default:"gorm"`
 	SSLMode      string `long:"db-sslmode" env:"DB_SSLMODE" yaml:"sslmode" description:"Database SSL mode." default:"require"`
 	NoSync       bool   `long:"no-sync" yaml:"no-sync" description:"Do not sync database."`
-	SyncInterval uint16 `long:"sync-interval" yaml:"sync-interval" description:"DB sync interval (in minutes)" default:"1"`
+	SyncInterval uint16 `long:"sync-interval" env:"DB_SYNC_INTERVAL" yaml:"sync-interval" description:"DB sync interval (in minutes)" default:"1"`
 }
 
 // S3BucketConfig stores the S3 bucket configuration
@@ -204,10 +204,18 @@ func LoadConfig(version string) *Config {
 	// Provider Config
 
 	if providerNoVersioning := os.Getenv("TERRABOARD_NO_VERSIONING"); providerNoVersioning != "" {
-		c.Provider.NoVersioning = true
+		if noVersioning, err := strconv.ParseBool(providerNoVersioning); err == nil {
+			c.Provider.NoVersioning = noVersioning
+		} else {
+			c.Provider.NoVersioning = true
+		}
 	}
 	if providerNoLocks := os.Getenv("TERRABOARD_NO_LOCKS"); providerNoLocks != "" {
-		c.Provider.NoLocks = true
+		if noLocks, err := strconv.ParseBool(providerNoLocks); err == nil {
+			c.Provider.NoLocks = noLocks
+		} else {
+			c.Provider.NoLocks = true
+		}
 	}
 
 	// DB Config
@@ -231,6 +239,11 @@ func LoadConfig(version string) *Config {
 	}
 	if dbSSLMode := os.Getenv("DB_SSLMODE"); dbSSLMode != "" {
 		c.DB.SSLMode = dbSSLMode
+	}
+	if dbSyncInterval := os.Getenv("DB_SYNC_MINUTES"); dbSyncInterval != "" {
+		if syncInterval, err := strconv.Atoi(dbSyncInterval); err == nil {
+			c.DB.SyncInterval = uint16(syncInterval)
+		}
 	}
 
 	// AWS Config

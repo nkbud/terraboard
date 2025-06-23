@@ -15,8 +15,9 @@ services:
       DB_USER: gorm
       DB_PASSWORD: mypassword
       DB_SSLMODE: disable
+      DB_SYNC_MINUTES: 60
       TERRABOARD_STATIC_DIR: /static
-      TERRABOARD_NO_VERSIONING: true
+      TERRABOARD_NO_VERSIONING: ${TERRABOARD_NO_VERSIONING}
       TERRABOARD_NO_LOCKS: true
       GODEBUG: netdns=go
     depends_on:
@@ -39,6 +40,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    ports:
+      - "5432:5432"
 
 volumes:
   tb-data: {}

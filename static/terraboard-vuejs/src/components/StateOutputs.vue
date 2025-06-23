@@ -13,7 +13,7 @@
         <tbody>
           <tr v-for="out in sortedOutputs" v-bind:key="out">
             <td class="attr-key">{{ out.name }}</td>
-            <td class="attr-val">{{ out.value }}</td>
+            <td class="attr-val">{{ displayValue(out) }}</td>
           </tr>
         </tbody>
       </table>
@@ -27,6 +27,22 @@ import { Options, Vue } from "vue-class-component";
 @Options({
   props: {
     module: {},
+  },
+  data() {
+    return {
+      redactSensitive: true,
+    };
+  },
+  methods: {
+    displayValue(out: any): string {
+      if (this.redactSensitive && out.sensitive) {
+        if (out.value == "null") {
+          return "(null)";
+        }
+        return "(" + out.value.length + ")";
+      }
+      return out.value;
+    },
   },
   computed: {
     sortedOutputs() {

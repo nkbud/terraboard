@@ -8,7 +8,7 @@
       <div class="card">
         <h4 class="card-header">
           Attributes
-          <div class="float-end">
+          <!-- <div class="float-end">
             <label class="form-check-label me-2" for="redactSensitiveToggle">
               Hide sensitive values
             </label>
@@ -19,7 +19,7 @@
               id="redactSensitiveToggle"
               v-model="redactSensitive"
             />
-          </div>
+          </div> -->
         </h4>
         <table class="table">
           <thead>
@@ -62,7 +62,10 @@ import { Options, Vue } from "vue-class-component";
   methods: {
     displayValue(attr: any): string {
       if (this.redactSensitive && attr.sensitive) {
-        return "(sensitive value)";
+        if (attr.value == "null") {
+          return "(null)";
+        }
+        return "(" + attr.value.length + ")";
       }
       return attr.value;
     },
