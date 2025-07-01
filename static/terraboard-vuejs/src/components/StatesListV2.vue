@@ -27,7 +27,10 @@
                           style="cursor: pointer;"></span>
                   </td>
                   <td class="align-middle" :style="`padding-left: ${node.level * 20 + 10}px`">
-                    {{node.displayPath}}
+                    <span v-if="node.states.length === 1">
+                      <router-link :to="`/lineage/${node.states[0].lineage_value}`">{{node.displayPath}}</router-link>
+                    </span>
+                    <span v-else>{{node.displayPath}}</span>
                   </td>
                   <td class="align-middle">{{node.resourceCount}}</td>
                   <td class="text-center align-middle p-0">
@@ -352,7 +355,7 @@ interface PrefixNode {
         return;
       }
       
-      const url = `/api/lineages/stats?limit=10000`; // Fetch all states at once
+      const url = `/api/lineages/stats`; // Fetch all states without pagination
       axios.get(url)
         .then((response) => {
           apiCache.set(cacheKey, response);

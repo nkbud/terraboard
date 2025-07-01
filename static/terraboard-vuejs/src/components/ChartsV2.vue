@@ -192,7 +192,10 @@ const chartOptionsLocked =
       
       if (this.locksChart) {
         this.locksChart.data.datasets[0].data = [...this.pieLockedStates.data];
-        this.locksChart.update();
+        this.locksChart.update('none'); // Force immediate update
+      } else {
+        // Chart doesn't exist yet, create it
+        this.createLocksChart();
       }
     },
     
@@ -214,7 +217,10 @@ const chartOptionsLocked =
       if (this.resourceTypesChart) {
         this.resourceTypesChart.data.labels = [...this.pieResourceTypes.labels];
         this.resourceTypesChart.data.datasets[0].data = [...this.pieResourceTypes.data];
-        this.resourceTypesChart.update();
+        this.resourceTypesChart.update('none'); // Force immediate update
+      } else {
+        // Chart doesn't exist yet, create it
+        this.createResourceTypesChart();
       }
     },
     
@@ -236,7 +242,10 @@ const chartOptionsLocked =
       if (this.versionsChart) {
         this.versionsChart.data.labels = [...this.pieTfVersions.labels];
         this.versionsChart.data.datasets[0].data = [...this.pieTfVersions.data];
-        this.versionsChart.update();
+        this.versionsChart.update('none'); // Force immediate update
+      } else {
+        // Chart doesn't exist yet, create it
+        this.createVersionsChart();
       }
     },
     
@@ -438,7 +447,7 @@ const chartOptionsLocked =
       }
       
       // Fallback: make API call if no cached data
-      const url = `/api/lineages/stats?limit=10000`;
+      const url = `/api/lineages/stats`;
       axios.get(url)
         .then((response) => {
           apiCache.set(cacheKey, response);
