@@ -20,6 +20,7 @@ import { Options, Vue } from 'vue-class-component';
 import { Chart, ChartItem, PieController, ArcElement, Tooltip } from 'chart.js'
 import axios from "axios"
 import router from "../router";
+import apiCache from '@/services/ApiCache'
 
 Chart.register( PieController, ArcElement, Tooltip )
 
@@ -137,9 +138,17 @@ const chartOptionsLocked =
       // Build query parameter for filtered lineages
       const lineageQuery = lineages.map(l => `lineage=${encodeURIComponent(l)}`).join('&');
       const url = `/api/resource/types/count?${lineageQuery}`;
+      const cacheKey = `resource-types-filtered-${lineages.join(',')}`;
+      
+      const cachedData = apiCache.get(cacheKey);
+      if (cachedData) {
+        this.updateResourceTypesChart(cachedData);
+        return;
+      }
       
       axios.get(url)
         .then((response) => {
+          apiCache.set(cacheKey, response.data);
           this.updateResourceTypesChart(response.data);
         })
         .catch((err) => {
@@ -242,35 +251,24 @@ const chartOptionsLocked =
     },
     
     fetchResourceTypes(): void {
+      const cacheKey = 'api-resource-types-count';
+      const cachedData = apiCache.get(cacheKey);
+      
+      if (cachedData) {
+        this.updateResourceTypesChart(cachedData);
+        this.pieResourceTypes.options.onClick = this.searchType;
+        this.createResourceTypesChart();
+        return;
+      }
+      
       const url = `/api/resource/types/count`;
       axios.get(url)
         .then((response) => {
+          apiCache.set(cacheKey, response.data);
           this.updateResourceTypesChart(response.data);
           
           this.pieResourceTypes.options.onClick = this.searchType;
-
-          const ctx = document.getElementById('chart-pie-resource-types-v2') as ChartItem;
-          this.resourceTypesChart = new Chart(ctx, {
-              type: 'pie',
-              data: {
-                  labels: this.pieResourceTypes.labels,
-                  datasets: [{
-                      label: 'States Resources Type',
-                      data: this.pieResourceTypes.data,
-                      backgroundColor: [
-                        '#4dc9f6',
-                        '#f67019',
-                        '#f53794',
-                        '#537bc4',
-                        '#acc236',
-                        '#166a8f',
-                        '#00a950',
-                      ],
-                      hoverOffset: 4
-                  }]
-              },
-              options: this.pieResourceTypes.options
-          });
+          this.createResourceTypesChart();
         })
         .catch(function (err) {
           if (err.response) {
@@ -284,38 +282,54 @@ const chartOptionsLocked =
         .then(function () {
           // always executed
         });
+    },
+
+    createResourceTypesChart(): void {
+      const ctx = document.getElementById('chart-pie-resource-types-v2') as ChartItem;
+      if (ctx) {
+        this.resourceTypesChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: this.pieResourceTypes.labels,
+                datasets: [{
+                    label: 'States Resources Type',
+                    data: this.pieResourceTypes.data,
+                    backgroundColor: [
+                      '#4dc9f6',
+                      '#f67019',
+                      '#f53794',
+                      '#537bc4',
+                      '#acc236',
+                      '#166a8f',
+                      '#00a950',
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: this.pieResourceTypes.options
+        });
+      }
     },
     
     fetchVersions(): void {
+      const cacheKey = 'api-terraform-versions-count';
+      const cachedData = apiCache.get(cacheKey);
+      
+      if (cachedData) {
+        this.updateVersionsChart(cachedData);
+        this.pieTfVersions.options.onClick = this.searchVersion;
+        this.createVersionsChart();
+        return;
+      }
+      
       const url = `/api/lineages/tfversion/count?orderBy=version`;
       axios.get(url)
         .then((response) => {
+          apiCache.set(cacheKey, response.data);
           this.updateVersionsChart(response.data);
 
           this.pieTfVersions.options.onClick = this.searchVersion;
-
-          const ctx = document.getElementById('chart-pie-terraform-versions-v2') as ChartItem;
-          this.versionsChart = new Chart(ctx, {
-              type: 'pie',
-              data: {
-                  labels: this.pieTfVersions.labels,
-                  datasets: [{
-                      label: 'States Versions',
-                      data: this.pieTfVersions.data,
-                      backgroundColor: [
-                        '#4dc9f6',
-                        '#f67019',
-                        '#f53794',
-                        '#537bc4',
-                        '#acc236',
-                        '#166a8f',
-                        '#00a950',
-                      ],
-                      hoverOffset: 4
-                  }]
-              },
-              options: this.pieTfVersions.options
-          });
+          this.createVersionsChart();
         })
         .catch(function (err) {
           if (err.response) {
@@ -330,30 +344,50 @@ const chartOptionsLocked =
           // always executed
         });
     },
+
+    createVersionsChart(): void {
+      const ctx = document.getElementById('chart-pie-terraform-versions-v2') as ChartItem;
+      if (ctx) {
+        this.versionsChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: this.pieTfVersions.labels,
+                datasets: [{
+                    label: 'States Versions',
+                    data: this.pieTfVersions.data,
+                    backgroundColor: [
+                      '#4dc9f6',
+                      '#f67019',
+                      '#f53794',
+                      '#537bc4',
+                      '#acc236',
+                      '#166a8f',
+                      '#00a950',
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: this.pieTfVersions.options
+        });
+      }
+    },
     
     fetchLocks(): void {
+      const cacheKey = 'api-locks';
+      const cachedData = apiCache.get(cacheKey);
+      
+      if (cachedData) {
+        this.locks = cachedData;
+        this.createLocksChart();
+        return;
+      }
+      
       const url = `/api/locks`;
       axios.get(url)
         .then((response) => {
           this.locks = response.data;
-
-          const ctx = document.getElementById('chart-pie-ls-v2') as ChartItem;
-          this.locksChart = new Chart(ctx, {
-              type: 'pie',
-              data: {
-                  labels: this.pieLockedStates.labels,
-                  datasets: [{
-                      label: 'States Locks Status',
-                      data: this.pieLockedStates.data,
-                      backgroundColor: [
-                        '#f67019',
-                        '#4dc9f6',
-                      ],
-                      hoverOffset: 4
-                  }]
-              },
-              options: this.pieLockedStates.options
-          });
+          apiCache.set(cacheKey, response.data);
+          this.createLocksChart();
         })
         .catch(function (err) {
           if (err.response) {
@@ -368,11 +402,46 @@ const chartOptionsLocked =
           // always executed
         });
     },
+
+    createLocksChart(): void {
+      const ctx = document.getElementById('chart-pie-ls-v2') as ChartItem;
+      if (ctx) {
+        this.locksChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: this.pieLockedStates.labels,
+                datasets: [{
+                    label: 'States Locks Status',
+                    data: this.pieLockedStates.data,
+                    backgroundColor: [
+                      '#f67019',
+                      '#4dc9f6',
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: this.pieLockedStates.options
+        });
+      }
+    },
     
     fetchAllStates(): void {
-      const url = `/api/lineages/stats?page=1&limit=1000`; // Get more states for filtering
+      // Try to get states from cache first (shared with StatesListV2)
+      const cacheKey = 'api-lineages-stats-all';
+      const cachedData: any = apiCache.get(cacheKey);
+      
+      if (cachedData && cachedData.data) {
+        this.allStates = cachedData.data.states || [];
+        this.statesTotal = cachedData.data.total || 0;
+        this.fetchLocks();
+        return;
+      }
+      
+      // Fallback: make API call if no cached data
+      const url = `/api/lineages/stats?limit=10000`;
       axios.get(url)
         .then((response) => {
+          apiCache.set(cacheKey, response);
           this.allStates = response.data.states || [];
           this.statesTotal = response.data.total || 0;
           this.fetchLocks();

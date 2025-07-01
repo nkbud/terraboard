@@ -1,9 +1,5 @@
 <template>
 <div id="results" class="row">
-    <label id="navigate"> <span class="fas fa-caret-left" role="button" v-if="prevPage"
-            v-on:click="fetchStats(prevPage)"></span> {{startItems}}-{{itemsInPage}}/{{results.total}}
-        <span class="fas fa-caret-right" role="button" v-if="nextPage" v-on:click="fetchStats(nextPage)"></span>
-    </label>
     <div class="table-responsive">
       <table class="table table-border table-striped">
           <thead>
@@ -51,6 +47,7 @@ import { Options, Vue } from 'vue-class-component';
 import { Chart, ChartItem, CategoryScale, PointElement,
 LineController, LineElement, LinearScale, Tooltip } from 'chart.js'
 import axios from "axios"
+import apiCache from '@/services/ApiCache'
 
 Chart.register( CategoryScale, LineElement, LineController, LinearScale, PointElement, Tooltip )
 
@@ -80,25 +77,28 @@ interface PrefixNode {
     return {
       locksStatus: {},
       results: {},
-      pages: 0,
-      page: 0,
-      prevPage: 0,
-      nextPage: 0,
-      startItems: 0,
-      itemsInPage: 0,
-      itemsPerPage: 20,
       prefixTree: new Map<string, PrefixNode>(),
       displayNodes: [] as PrefixNode[],
       selectedPrefix: null as string | null,
+      allStates: [] as StateStat[],
     }
   },
   emits: ['prefix-selected'],
   methods: {
     fetchLocks(): void {
+      const cacheKey = 'api-locks';
+      const cachedData = apiCache.get(cacheKey);
+      
+      if (cachedData) {
+        this.locksStatus = cachedData;
+        return;
+      }
+      
       const url = `/api/locks`;
       axios.get(url)
         .then((response) => {
           this.locksStatus = response.data;
+          apiCache.set(cacheKey, response.data);
         })     
         .catch(function (err) {
           if (err.response) {
@@ -220,41 +220,71 @@ interface PrefixNode {
     },
     
     getAggregatedActivity(idx: number, node: PrefixNode, elementId: string): void {
+      // Check if we already have a cached aggregated activity for this node
+      const cacheKey = `activity-${node.path}`;
+      const cachedActivity: any = apiCache.get(cacheKey);
+      
+      if (cachedActivity && cachedActivity.labels && cachedActivity.data) {
+        this.createSparkChart(elementId, cachedActivity.labels, cachedActivity.data);
+        return;
+      }
+      
       // Aggregate activity data from all states under this prefix
-      const allActivityData: any[] = [];
       const activityPromises: Promise<any>[] = [];
       
       node.states.forEach(state => {
-        const promise = axios.get(`/api/lineages/${state.lineage_value}/activity`)
-          .then(response => response.data)
-          .catch(err => {
-            console.log("Activity fetch error:", err);
-            return [];
-          });
-        activityPromises.push(promise);
+        const stateCacheKey = `activity-state-${state.lineage_value}`;
+        const cachedStateActivity = apiCache.get(stateCacheKey);
+        
+        if (cachedStateActivity) {
+          activityPromises.push(Promise.resolve(cachedStateActivity));
+        } else {
+          const promise = axios.get(`/api/lineages/${state.lineage_value}/activity`)
+            .then(response => {
+              apiCache.set(stateCacheKey, response.data);
+              return response.data;
+            })
+            .catch(err => {
+              console.log("Activity fetch error:", err);
+              return [];
+            });
+          activityPromises.push(promise);
+        }
       });
       
       Promise.all(activityPromises).then(results => {
         const aggregatedData = new Map<string, number>();
         
         results.forEach(stateActivity => {
-          stateActivity.forEach((activity: any) => {
-            const date = this.formatDate(activity.last_modified);
-            const count = aggregatedData.get(date) || 0;
-            aggregatedData.set(date, count + activity.resource_count);
-          });
+          if (Array.isArray(stateActivity)) {
+            stateActivity.forEach((activity: any) => {
+              const date = this.formatDate(activity.last_modified);
+              const count = aggregatedData.get(date) || 0;
+              aggregatedData.set(date, count + (activity.resource_count || 0));
+            });
+          }
         });
         
-        const sortedDates = Array.from(aggregatedData.keys()).sort();
+        // Sort dates and prepare chart data
+        const sortedDates = Array.from(aggregatedData.keys()).sort((a, b) => {
+          return new Date(a).getTime() - new Date(b).getTime();
+        });
+        
         const labels = sortedDates;
         const data = sortedDates.map(date => aggregatedData.get(date)!.toString());
+        
+        // Cache the aggregated result
+        const activityResult = { labels, data };
+        apiCache.set(cacheKey, activityResult);
         
         this.createSparkChart(elementId, labels, data);
       });
     },
     
     formatDate(date: string): string {
-        return new Date(date).toUTCString();
+        // Create a more consistent date format for aggregation
+        const dateObj = new Date(date);
+        return dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
     },
     
     createSparkChart(id: string, labels: string[], data: string[]): void {
@@ -309,24 +339,25 @@ interface PrefixNode {
     
     updatePager(response: any): void {
       this.results = response.data;
-      this.pages = Math.ceil(this.results.total / this.itemsPerPage);
-      this.page = this.results.page;
-      this.prevPage = (this.page <= 1) 
-      ? undefined 
-      : this.page - 1;
-      this.nextPage = (this.page >= this.pages) 
-      ? undefined 
-      : this.page + 1;
-      this.startItems = this.itemsPerPage * (this.page - 1) + 1;
-      this.itemsInPage = Math.min(this.itemsPerPage * this.page, this.results.total);
+      this.allStates = response.data.states || [];
     },
     
-    fetchStats(page: number): void {
-      const url = `/api/lineages/stats?page=`+page;
+    fetchStats(): void {
+      const cacheKey = 'api-lineages-stats-all';
+      const cachedData = apiCache.get(cacheKey);
+      
+      if (cachedData) {
+        this.updatePager(cachedData);
+        this.buildPrefixTree(this.allStates);
+        return;
+      }
+      
+      const url = `/api/lineages/stats?limit=10000`; // Fetch all states at once
       axios.get(url)
         .then((response) => {
+          apiCache.set(cacheKey, response);
           this.updatePager(response);
-          this.buildPrefixTree(this.results.states);
+          this.buildPrefixTree(this.allStates);
         })
         .catch(function (err) {
           if (err.response) {
@@ -344,7 +375,7 @@ interface PrefixNode {
   },
   created() {
     this.fetchLocks();
-    this.fetchStats(1);
+    this.fetchStats();
   },
 })
 export default class StatesListV2 extends Vue {}
