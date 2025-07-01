@@ -23,6 +23,12 @@
             </router-link>
           </li>
           <li class="nav-item mx-2">
+            <router-link to="/overviewv2" class="nav-link"
+              ><span class="fas fa-sitemap" aria-hidden="true"></span>
+              OverviewV2
+            </router-link>
+          </li>
+          <li class="nav-item mx-2">
             <router-link to="/plans" class="nav-link"
               ><span class="fas fa-file-alt" aria-hidden="true"></span>
               Plans

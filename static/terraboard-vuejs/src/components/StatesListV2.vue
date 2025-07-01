@@ -158,7 +158,7 @@ interface PrefixNode {
           }
           
           const node = this.prefixTree.get(prefix)!;
-          if (!node.states.find(s => s.path === state.path)) {
+          if (!node.states.find((s: StateStat) => s.path === state.path)) {
             node.states.push(state);
             node.resourceCount += state.resource_count;
           }
