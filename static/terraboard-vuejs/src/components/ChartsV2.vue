@@ -1,15 +1,15 @@
 <template>
 <div class="row justify-content-around">
     <div class="overview-chart col-6 col-md-3 col-xxl-4 text-center" style="min-width: 100px; max-width: 300px;">
-        <canvas id="chart-pie-resource-types-v2" class="chart mb-2"></canvas>
+        <canvas ref="resourceTypesCanvas" id="chart-pie-resource-types-v2" class="chart mb-2"></canvas>
         <h5>Resource types{{ selectedPrefix ? ' (' + selectedPrefix + ')' : '' }}</h5>
     </div>
     <div class="overview-chart col-6 col-md-3 col-xxl-4 text-center" style="min-width: 100px; max-width: 300px;">
-        <canvas id="chart-pie-terraform-versions-v2" class="chart mb-2"></canvas>
+        <canvas ref="versionsCanvas" id="chart-pie-terraform-versions-v2" class="chart mb-2"></canvas>
         <h5>Terraform versions{{ selectedPrefix ? ' (' + selectedPrefix + ')' : '' }}</h5>
     </div>
     <div class="overview-chart col-6 col-md-3 col-xxl-4 text-center" style="min-width: 100px; max-width: 300px;">
-        <canvas id="chart-pie-ls-v2" class="chart mb-2"></canvas>
+        <canvas ref="locksCanvas" id="chart-pie-ls-v2" class="chart mb-2"></canvas>
         <h5>States locked{{ selectedPrefix ? ' (' + selectedPrefix + ')' : '' }}</h5>
     </div>
 </div>
@@ -29,6 +29,7 @@ const chartOptionsVersions =
 {
   onClick: undefined,
   responsive: true,
+  animation: false, // Disable animations to avoid conflicts
   plugins: {
     legend: {
       display: false,
@@ -42,6 +43,7 @@ const chartOptionsResTypes =
 {
   onClick: undefined,
   responsive: true,
+  animation: false, // Disable animations to avoid conflicts
   plugins: {
     legend: {
       display: false,
@@ -54,6 +56,7 @@ const chartOptionsResTypes =
 const chartOptionsLocked = 
 {
   responsive: true,
+  animation: false, // Disable animations to avoid conflicts
   plugins: {
     legend: {
       display: false,
@@ -115,7 +118,8 @@ const chartOptionsLocked =
     },
     
     updateChartsForSelectedPrefix(): void {
-      nextTick(() => {
+      // Use a more defensive approach to avoid conflicts
+      setTimeout(() => {
         const filteredStates = this.getFilteredStates();
         
         // Update resource types chart
@@ -126,7 +130,7 @@ const chartOptionsLocked =
         
         // Update locks chart
         this.updateLocksChart(filteredStates);
-      });
+      }, 100); // Small delay to let DOM settle
     },
     
     fetchResourceTypesForStates(states: any[]): void {
@@ -295,10 +299,9 @@ const chartOptionsLocked =
 
     createResourceTypesChart(): void {
       nextTick(() => {
-        const canvasId = 'chart-pie-resource-types-v2';
-        const ctx = document.getElementById(canvasId) as ChartItem;
-        if (!ctx) {
-          console.warn('Canvas element not found:', canvasId);
+        const canvas = this.$refs.resourceTypesCanvas as HTMLCanvasElement;
+        if (!canvas) {
+          console.warn('Resource types canvas ref not found');
           return;
         }
         
@@ -308,14 +311,14 @@ const chartOptionsLocked =
           this.resourceTypesChart = null;
         }
         
-        // Also check Chart.js global registry
-        const existingChart = Chart.getChart(canvasId);
+        // Also check Chart.js global registry using the canvas element
+        const existingChart = Chart.getChart(canvas);
         if (existingChart) {
           existingChart.destroy();
         }
         
         try {
-          this.resourceTypesChart = new Chart(ctx, {
+          this.resourceTypesChart = new Chart(canvas, {
               type: 'pie',
               data: {
                   labels: this.pieResourceTypes.labels,
@@ -375,10 +378,9 @@ const chartOptionsLocked =
 
     createVersionsChart(): void {
       nextTick(() => {
-        const canvasId = 'chart-pie-terraform-versions-v2';
-        const ctx = document.getElementById(canvasId) as ChartItem;
-        if (!ctx) {
-          console.warn('Canvas element not found:', canvasId);
+        const canvas = this.$refs.versionsCanvas as HTMLCanvasElement;
+        if (!canvas) {
+          console.warn('Versions canvas ref not found');
           return;
         }
         
@@ -388,14 +390,14 @@ const chartOptionsLocked =
           this.versionsChart = null;
         }
         
-        // Also check Chart.js global registry
-        const existingChart = Chart.getChart(canvasId);
+        // Also check Chart.js global registry using the canvas element
+        const existingChart = Chart.getChart(canvas);
         if (existingChart) {
           existingChart.destroy();
         }
         
         try {
-          this.versionsChart = new Chart(ctx, {
+          this.versionsChart = new Chart(canvas, {
               type: 'pie',
               data: {
                   labels: this.pieTfVersions.labels,
@@ -452,10 +454,9 @@ const chartOptionsLocked =
 
     createLocksChart(): void {
       nextTick(() => {
-        const canvasId = 'chart-pie-ls-v2';
-        const ctx = document.getElementById(canvasId) as ChartItem;
-        if (!ctx) {
-          console.warn('Canvas element not found:', canvasId);
+        const canvas = this.$refs.locksCanvas as HTMLCanvasElement;
+        if (!canvas) {
+          console.warn('Locks canvas ref not found');
           return;
         }
         
@@ -465,14 +466,14 @@ const chartOptionsLocked =
           this.locksChart = null;
         }
         
-        // Also check Chart.js global registry
-        const existingChart = Chart.getChart(canvasId);
+        // Also check Chart.js global registry using the canvas element
+        const existingChart = Chart.getChart(canvas);
         if (existingChart) {
           existingChart.destroy();
         }
         
         try {
-          this.locksChart = new Chart(ctx, {
+          this.locksChart = new Chart(canvas, {
               type: 'pie',
               data: {
                   labels: this.pieLockedStates.labels,
