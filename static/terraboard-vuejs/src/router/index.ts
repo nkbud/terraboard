@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 import Home from '../views/Home.vue'
+import HomeV2 from '../views/HomeV2.vue'
 import Lineage from '../views/Lineage.vue'
 import State from '../views/State.vue'
 import Plan from '../views/Plan.vue'
@@ -11,6 +12,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/',
     name: 'Home',
     component: Home
+  },
+  {
+    path: '/overviewv2',
+    name: 'OverviewV2',
+    component: HomeV2
   },
   {
     path: '/lineage/:lineage',
