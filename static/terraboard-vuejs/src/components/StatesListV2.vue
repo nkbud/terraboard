@@ -84,6 +84,7 @@ interface PrefixNode {
       displayNodes: [] as PrefixNode[],
       selectedPrefix: null as string | null,
       allStates: [] as StateStat[],
+      chartInstances: new Map<string, Chart>(),
     }
   },
   emits: ['prefix-selected'],
@@ -294,6 +295,19 @@ interface PrefixNode {
       const ctx = document.getElementById(id) as ChartItem;
       if (!ctx) return;
       
+      // Check if there's already a chart instance for this ID and destroy it
+      if (this.chartInstances.has(id)) {
+        this.chartInstances.get(id)?.destroy();
+        this.chartInstances.delete(id);
+      }
+      
+      // Also check Chart.js global registry for any existing chart on this canvas
+      // Chart.getChart() expects a string id or canvas element
+      const existingChart = Chart.getChart(id);
+      if (existingChart) {
+        existingChart.destroy();
+      }
+      
       const sparkchart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -338,6 +352,9 @@ interface PrefixNode {
           }
         }
       });
+      
+      // Store the chart instance for proper cleanup
+      this.chartInstances.set(id, sparkchart);
     },
     
     updatePager(response: any): void {
@@ -379,6 +396,13 @@ interface PrefixNode {
   created() {
     this.fetchLocks();
     this.fetchStats();
+  },
+  beforeUnmount() {
+    // Clean up all chart instances to prevent memory leaks
+    this.chartInstances.forEach((chart: Chart) => {
+      chart.destroy();
+    });
+    this.chartInstances.clear();
   },
 })
 export default class StatesListV2 extends Vue {}
