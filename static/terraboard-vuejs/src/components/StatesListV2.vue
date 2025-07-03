@@ -15,7 +15,7 @@
               </th>
           </thead>
           <tbody>
-              <tr v-for="(node, index) in displayNodes" v-bind:key="node.path" 
+              <tr v-for="node in displayNodes" v-bind:key="node.path" 
                   :class="{ 'selected-row': selectedPrefix === node.path }"
                   @click="selectPrefix(node.path)">
                   <td class="align-middle">
@@ -34,8 +34,11 @@
                   </td>
                   <td class="align-middle">{{node.resourceCount}}</td>
                   <td class="text-center align-middle p-0">
-                      <canvas v-bind:id="'spark-'+index" width="200" height="70" style="max-width: 200px; max-height: 70px;">
-                        {{getAggregatedActivity(index, node, 'spark-'+index)}}
+                      <canvas :ref="`spark-${getSanitizedPath(node.path)}`" 
+                              :id="`spark-${getSanitizedPath(node.path)}`" 
+                              width="200" 
+                              height="70" 
+                              style="max-width: 200px; max-height: 70px;">
                       </canvas>
                   </td>
               </tr>
@@ -88,7 +91,43 @@ interface PrefixNode {
     }
   },
   emits: ['prefix-selected'],
+  watch: {
+    displayNodes: {
+      handler: function() {
+        this.$nextTick(() => {
+          this.updateChartsForDisplayNodes();
+        });
+      },
+      deep: true
+    }
+  },
   methods: {
+    getSanitizedPath(path: string): string {
+      // Convert path to a safe ID by replacing special characters
+      return path.replace(/[^a-zA-Z0-9]/g, '-').replace(/--+/g, '-').replace(/^-|-$/g, '');
+    },
+    
+    updateChartsForDisplayNodes(): void {
+      // Clean up charts for nodes that are no longer displayed
+      const currentCanvasIds = new Set(this.displayNodes.map((node: PrefixNode) => `spark-${this.getSanitizedPath(node.path)}`));
+      
+      // Destroy charts that are no longer needed
+      for (const [canvasId, chart] of this.chartInstances) {
+        if (!currentCanvasIds.has(canvasId)) {
+          chart.destroy();
+          this.chartInstances.delete(canvasId);
+        }
+      }
+      
+      // Create charts for new nodes
+      this.displayNodes.forEach((node: PrefixNode) => {
+        const canvasId = `spark-${this.getSanitizedPath(node.path)}`;
+        if (!this.chartInstances.has(canvasId)) {
+          this.getAggregatedActivity(node, canvasId);
+        }
+      });
+    },
+    
     fetchLocks(): void {
       const cacheKey = 'api-locks';
       const cachedData = apiCache.get(cacheKey);
@@ -223,7 +262,7 @@ interface PrefixNode {
       this.$emit('prefix-selected', this.selectedPrefix);
     },
     
-    getAggregatedActivity(idx: number, node: PrefixNode, elementId: string): void {
+    getAggregatedActivity(node: PrefixNode, elementId: string): void {
       // Check if we already have a cached aggregated activity for this node
       const cacheKey = `activity-${node.path}`;
       const cachedActivity: any = apiCache.get(cacheKey);
@@ -292,69 +331,82 @@ interface PrefixNode {
     },
     
     createSparkChart(id: string, labels: string[], data: string[]): void {
-      const ctx = document.getElementById(id) as ChartItem;
-      if (!ctx) return;
-      
-      // Check if there's already a chart instance for this ID and destroy it
-      if (this.chartInstances.has(id)) {
-        this.chartInstances.get(id)?.destroy();
-        this.chartInstances.delete(id);
-      }
-      
-      // Also check Chart.js global registry for any existing chart on this canvas
-      // Chart.getChart() expects a string id or canvas element
-      const existingChart = Chart.getChart(id);
-      if (existingChart) {
-        existingChart.destroy();
-      }
-      
-      const sparkchart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              data: data
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          elements: {
-            line: {
-              borderColor: '#4dc9f6',
-              borderWidth: 1
+      // Use nextTick to ensure DOM is fully updated
+      this.$nextTick(() => {
+        const ctx = document.getElementById(id) as ChartItem;
+        if (!ctx) {
+          console.warn(`Canvas element with id "${id}" not found`);
+          return;
+        }
+        
+        // Check if there's already a chart instance for this ID and destroy it
+        if (this.chartInstances.has(id)) {
+          const existingChart = this.chartInstances.get(id);
+          if (existingChart) {
+            existingChart.destroy();
+          }
+          this.chartInstances.delete(id);
+        }
+        
+        // Also check Chart.js global registry for any existing chart on this canvas
+        const canvas = ctx as HTMLCanvasElement;
+        const existingGlobalChart = Chart.getChart(canvas);
+        if (existingGlobalChart) {
+          existingGlobalChart.destroy();
+        }
+        
+        try {
+          const sparkchart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  data: data
+                }
+              ]
             },
-            point: {
-              radius: 1
-            }
-          },
-          scales: {
-            yAxes:
-              {
-                display: true,
-                ticks: {
-                  stepSize: 1
+            options: {
+              responsive: true,
+              elements: {
+                line: {
+                  borderColor: '#4dc9f6',
+                  borderWidth: 1
+                },
+                point: {
+                  radius: 1
                 }
               },
-            xAxes:
-              {
-                display: false
+              scales: {
+                yAxes:
+                  {
+                    display: true,
+                    ticks: {
+                      stepSize: 1
+                    }
+                  },
+                xAxes:
+                  {
+                    display: false
+                  }
+              },
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  enabled: true
+                },
               }
-          },
-          plugins: {
-            legend: {
-              display: false
-            },
-            tooltip: {
-              enabled: true
-            },
-          }
+            }
+          });
+          
+          // Store the chart instance for proper cleanup
+          this.chartInstances.set(id, sparkchart);
+        } catch (error) {
+          console.error(`Error creating spark chart for ${id}:`, error);
         }
       });
-      
-      // Store the chart instance for proper cleanup
-      this.chartInstances.set(id, sparkchart);
     },
     
     updatePager(response: any): void {
