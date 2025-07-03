@@ -18,6 +18,7 @@
 <script lang="ts">
 import { Options, Vue } from 'vue-class-component';
 import { Chart, ChartItem, PieController, ArcElement, Tooltip } from 'chart.js'
+import { nextTick } from 'vue';
 import axios from "axios"
 import router from "../router";
 import apiCache from '@/services/ApiCache'
@@ -114,16 +115,18 @@ const chartOptionsLocked =
     },
     
     updateChartsForSelectedPrefix(): void {
-      const filteredStates = this.getFilteredStates();
-      
-      // Update resource types chart
-      this.fetchResourceTypesForStates(filteredStates);
-      
-      // Update terraform versions chart  
-      this.fetchVersionsForStates(filteredStates);
-      
-      // Update locks chart
-      this.updateLocksChart(filteredStates);
+      nextTick(() => {
+        const filteredStates = this.getFilteredStates();
+        
+        // Update resource types chart
+        this.fetchResourceTypesForStates(filteredStates);
+        
+        // Update terraform versions chart  
+        this.fetchVersionsForStates(filteredStates);
+        
+        // Update locks chart
+        this.updateLocksChart(filteredStates);
+      });
     },
     
     fetchResourceTypesForStates(states: any[]): void {
@@ -279,14 +282,11 @@ const chartOptionsLocked =
           this.pieResourceTypes.options.onClick = this.searchType;
           this.createResourceTypesChart();
         })
-        .catch(function (err) {
-          if (err.response) {
-            console.log("Server Error:", err)
-          } else if (err.request) {
-            console.log("Network Error:", err)
-          } else {
-            console.log("Client Error:", err)
-          }
+        .catch((err) => {
+          console.log("Resource types fetch error:", err);
+          // Create chart with empty data on error
+          this.updateResourceTypesChart([]);
+          this.pieResourceTypes.options.onClick = this.searchType;
         })
         .then(function () {
           // always executed
@@ -294,30 +294,52 @@ const chartOptionsLocked =
     },
 
     createResourceTypesChart(): void {
-      const ctx = document.getElementById('chart-pie-resource-types-v2') as ChartItem;
-      if (ctx) {
-        this.resourceTypesChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: this.pieResourceTypes.labels,
-                datasets: [{
-                    label: 'States Resources Type',
-                    data: this.pieResourceTypes.data,
-                    backgroundColor: [
-                      '#4dc9f6',
-                      '#f67019',
-                      '#f53794',
-                      '#537bc4',
-                      '#acc236',
-                      '#166a8f',
-                      '#00a950',
-                    ],
-                    hoverOffset: 4
-                }]
-            },
-            options: this.pieResourceTypes.options
-        });
-      }
+      nextTick(() => {
+        const canvasId = 'chart-pie-resource-types-v2';
+        const ctx = document.getElementById(canvasId) as ChartItem;
+        if (!ctx) {
+          console.warn('Canvas element not found:', canvasId);
+          return;
+        }
+        
+        // Destroy any existing chart on this canvas
+        if (this.resourceTypesChart) {
+          this.resourceTypesChart.destroy();
+          this.resourceTypesChart = null;
+        }
+        
+        // Also check Chart.js global registry
+        const existingChart = Chart.getChart(canvasId);
+        if (existingChart) {
+          existingChart.destroy();
+        }
+        
+        try {
+          this.resourceTypesChart = new Chart(ctx, {
+              type: 'pie',
+              data: {
+                  labels: this.pieResourceTypes.labels,
+                  datasets: [{
+                      label: 'States Resources Type',
+                      data: this.pieResourceTypes.data,
+                      backgroundColor: [
+                        '#4dc9f6',
+                        '#f67019',
+                        '#f53794',
+                        '#537bc4',
+                        '#acc236',
+                        '#166a8f',
+                        '#00a950',
+                      ],
+                      hoverOffset: 4
+                  }]
+              },
+              options: this.pieResourceTypes.options
+          });
+        } catch (error) {
+          console.error('Error creating resource types chart:', error);
+        }
+      });
     },
     
     fetchVersions(): void {
@@ -340,14 +362,11 @@ const chartOptionsLocked =
           this.pieTfVersions.options.onClick = this.searchVersion;
           this.createVersionsChart();
         })
-        .catch(function (err) {
-          if (err.response) {
-            console.log("Server Error:", err)
-          } else if (err.request) {
-            console.log("Network Error:", err)
-          } else {
-            console.log("Client Error:", err)
-          }
+        .catch((err) => {
+          console.log("Versions fetch error:", err);
+          // Create chart with empty data on error
+          this.updateVersionsChart([]);
+          this.pieTfVersions.options.onClick = this.searchVersion;
         })
         .then(function () {
           // always executed
@@ -355,30 +374,52 @@ const chartOptionsLocked =
     },
 
     createVersionsChart(): void {
-      const ctx = document.getElementById('chart-pie-terraform-versions-v2') as ChartItem;
-      if (ctx) {
-        this.versionsChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: this.pieTfVersions.labels,
-                datasets: [{
-                    label: 'States Versions',
-                    data: this.pieTfVersions.data,
-                    backgroundColor: [
-                      '#4dc9f6',
-                      '#f67019',
-                      '#f53794',
-                      '#537bc4',
-                      '#acc236',
-                      '#166a8f',
-                      '#00a950',
-                    ],
-                    hoverOffset: 4
-                }]
-            },
-            options: this.pieTfVersions.options
-        });
-      }
+      nextTick(() => {
+        const canvasId = 'chart-pie-terraform-versions-v2';
+        const ctx = document.getElementById(canvasId) as ChartItem;
+        if (!ctx) {
+          console.warn('Canvas element not found:', canvasId);
+          return;
+        }
+        
+        // Destroy any existing chart on this canvas
+        if (this.versionsChart) {
+          this.versionsChart.destroy();
+          this.versionsChart = null;
+        }
+        
+        // Also check Chart.js global registry
+        const existingChart = Chart.getChart(canvasId);
+        if (existingChart) {
+          existingChart.destroy();
+        }
+        
+        try {
+          this.versionsChart = new Chart(ctx, {
+              type: 'pie',
+              data: {
+                  labels: this.pieTfVersions.labels,
+                  datasets: [{
+                      label: 'States Versions',
+                      data: this.pieTfVersions.data,
+                      backgroundColor: [
+                        '#4dc9f6',
+                        '#f67019',
+                        '#f53794',
+                        '#537bc4',
+                        '#acc236',
+                        '#166a8f',
+                        '#00a950',
+                      ],
+                      hoverOffset: 4
+                  }]
+              },
+              options: this.pieTfVersions.options
+          });
+        } catch (error) {
+          console.error('Error creating versions chart:', error);
+        }
+      });
     },
     
     fetchLocks(): void {
@@ -398,14 +439,11 @@ const chartOptionsLocked =
           apiCache.set(cacheKey, response.data);
           this.createLocksChart();
         })
-        .catch(function (err) {
-          if (err.response) {
-            console.log("Server Error:", err)
-          } else if (err.request) {
-            console.log("Network Error:", err)
-          } else {
-            console.log("Client Error:", err)
-          }
+        .catch((err) => {
+          console.log("Locks fetch error:", err);
+          // Create chart with empty locks data on error
+          this.locks = {};
+          this.createLocksChart();
         })
         .then(function () {
           // always executed
@@ -413,25 +451,47 @@ const chartOptionsLocked =
     },
 
     createLocksChart(): void {
-      const ctx = document.getElementById('chart-pie-ls-v2') as ChartItem;
-      if (ctx) {
-        this.locksChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: this.pieLockedStates.labels,
-                datasets: [{
-                    label: 'States Locks Status',
-                    data: this.pieLockedStates.data,
-                    backgroundColor: [
-                      '#f67019',
-                      '#4dc9f6',
-                    ],
-                    hoverOffset: 4
-                }]
-            },
-            options: this.pieLockedStates.options
-        });
-      }
+      nextTick(() => {
+        const canvasId = 'chart-pie-ls-v2';
+        const ctx = document.getElementById(canvasId) as ChartItem;
+        if (!ctx) {
+          console.warn('Canvas element not found:', canvasId);
+          return;
+        }
+        
+        // Destroy any existing chart on this canvas
+        if (this.locksChart) {
+          this.locksChart.destroy();
+          this.locksChart = null;
+        }
+        
+        // Also check Chart.js global registry
+        const existingChart = Chart.getChart(canvasId);
+        if (existingChart) {
+          existingChart.destroy();
+        }
+        
+        try {
+          this.locksChart = new Chart(ctx, {
+              type: 'pie',
+              data: {
+                  labels: this.pieLockedStates.labels,
+                  datasets: [{
+                      label: 'States Locks Status',
+                      data: this.pieLockedStates.data,
+                      backgroundColor: [
+                        '#f67019',
+                        '#4dc9f6',
+                      ],
+                      hoverOffset: 4
+                  }]
+              },
+              options: this.pieLockedStates.options
+          });
+        } catch (error) {
+          console.error('Error creating locks chart:', error);
+        }
+      });
     },
     
     fetchAllStates(): void {
@@ -470,6 +530,21 @@ const chartOptionsLocked =
     this.fetchResourceTypes();
     this.fetchVersions();
     this.fetchAllStates();
+  },
+  beforeUnmount() {
+    // Clean up all chart instances to prevent memory leaks
+    if (this.resourceTypesChart) {
+      this.resourceTypesChart.destroy();
+      this.resourceTypesChart = null;
+    }
+    if (this.versionsChart) {
+      this.versionsChart.destroy();
+      this.versionsChart = null;
+    }
+    if (this.locksChart) {
+      this.locksChart.destroy();
+      this.locksChart = null;
+    }
   },
 })
 export default class ChartsV2 extends Vue {}
