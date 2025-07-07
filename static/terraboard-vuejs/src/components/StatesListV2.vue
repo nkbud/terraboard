@@ -10,9 +10,6 @@
               <th>
                   Resources
               </th>
-              <th>
-                  Activity
-              </th>
           </thead>
           <tbody>
               <tr v-for="node in displayNodes" v-bind:key="node.path" 
@@ -33,14 +30,6 @@
                     <span v-else>{{node.displayPath}}</span>
                   </td>
                   <td class="align-middle">{{node.resourceCount}}</td>
-                  <td class="text-center align-middle p-0">
-                      <canvas :ref="`spark-${getSanitizedPath(node.path)}`" 
-                              :id="`spark-${getSanitizedPath(node.path)}`" 
-                              width="200" 
-                              height="70" 
-                              style="max-width: 200px; max-height: 70px;">
-                      </canvas>
-                  </td>
               </tr>
           </tbody>
       </table>
@@ -50,12 +39,8 @@
 
 <script lang="ts">
 import { Options, Vue } from 'vue-class-component';
-import { Chart, ChartItem, CategoryScale, PointElement,
-LineController, LineElement, LinearScale, Tooltip } from 'chart.js'
 import axios from "axios"
 import apiCache from '@/services/ApiCache'
-
-Chart.register( CategoryScale, LineElement, LineController, LinearScale, PointElement, Tooltip )
 
 interface StateStat {
   path: string;
@@ -87,47 +72,10 @@ interface PrefixNode {
       displayNodes: [] as PrefixNode[],
       selectedPrefix: null as string | null,
       allStates: [] as StateStat[],
-      chartInstances: new Map<string, Chart>(),
     }
   },
   emits: ['prefix-selected'],
-  watch: {
-    displayNodes: {
-      handler: function() {
-        this.$nextTick(() => {
-          this.updateChartsForDisplayNodes();
-        });
-      },
-      deep: true
-    }
-  },
   methods: {
-    getSanitizedPath(path: string): string {
-      // Convert path to a safe ID by replacing special characters
-      return path.replace(/[^a-zA-Z0-9]/g, '-').replace(/--+/g, '-').replace(/^-|-$/g, '');
-    },
-    
-    updateChartsForDisplayNodes(): void {
-      // Clean up charts for nodes that are no longer displayed
-      const currentCanvasIds = new Set(this.displayNodes.map((node: PrefixNode) => `spark-${this.getSanitizedPath(node.path)}`));
-      
-      // Destroy charts that are no longer needed
-      for (const [canvasId, chart] of this.chartInstances) {
-        if (!currentCanvasIds.has(canvasId)) {
-          chart.destroy();
-          this.chartInstances.delete(canvasId);
-        }
-      }
-      
-      // Create charts for new nodes
-      this.displayNodes.forEach((node: PrefixNode) => {
-        const canvasId = `spark-${this.getSanitizedPath(node.path)}`;
-        if (!this.chartInstances.has(canvasId)) {
-          this.getAggregatedActivity(node, canvasId);
-        }
-      });
-    },
-    
     fetchLocks(): void {
       const cacheKey = 'api-locks';
       const cachedData = apiCache.get(cacheKey);
@@ -261,154 +209,7 @@ interface PrefixNode {
       }
       this.$emit('prefix-selected', this.selectedPrefix);
     },
-    
-    getAggregatedActivity(node: PrefixNode, elementId: string): void {
-      // Check if we already have a cached aggregated activity for this node
-      const cacheKey = `activity-${node.path}`;
-      const cachedActivity: any = apiCache.get(cacheKey);
-      
-      if (cachedActivity && cachedActivity.labels && cachedActivity.data) {
-        this.createSparkChart(elementId, cachedActivity.labels, cachedActivity.data);
-        return;
-      }
-      
-      // Aggregate activity data from all states under this prefix
-      const activityPromises: Promise<any>[] = [];
-      
-      node.states.forEach(state => {
-        const stateCacheKey = `activity-state-${state.lineage_value}`;
-        const cachedStateActivity = apiCache.get(stateCacheKey);
-        
-        if (cachedStateActivity) {
-          activityPromises.push(Promise.resolve(cachedStateActivity));
-        } else {
-          const promise = axios.get(`/api/lineages/${state.lineage_value}/activity`)
-            .then(response => {
-              apiCache.set(stateCacheKey, response.data);
-              return response.data;
-            })
-            .catch(err => {
-              console.log("Activity fetch error:", err);
-              return [];
-            });
-          activityPromises.push(promise);
-        }
-      });
-      
-      Promise.all(activityPromises).then(results => {
-        const aggregatedData = new Map<string, number>();
-        
-        results.forEach(stateActivity => {
-          if (Array.isArray(stateActivity)) {
-            stateActivity.forEach((activity: any) => {
-              const date = this.formatDate(activity.last_modified);
-              const count = aggregatedData.get(date) || 0;
-              aggregatedData.set(date, count + (activity.resource_count || 0));
-            });
-          }
-        });
-        
-        // Sort dates and prepare chart data
-        const sortedDates = Array.from(aggregatedData.keys()).sort((a, b) => {
-          return new Date(a).getTime() - new Date(b).getTime();
-        });
-        
-        const labels = sortedDates;
-        const data = sortedDates.map(date => aggregatedData.get(date)!.toString());
-        
-        // Cache the aggregated result
-        const activityResult = { labels, data };
-        apiCache.set(cacheKey, activityResult);
-        
-        this.createSparkChart(elementId, labels, data);
-      });
-    },
-    
-    formatDate(date: string): string {
-        // Create a more consistent date format for aggregation
-        const dateObj = new Date(date);
-        return dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
-    },
-    
-    createSparkChart(id: string, labels: string[], data: string[]): void {
-      // Use nextTick to ensure DOM is fully updated
-      this.$nextTick(() => {
-        const ctx = document.getElementById(id) as ChartItem;
-        if (!ctx) {
-          console.warn(`Canvas element with id "${id}" not found`);
-          return;
-        }
-        
-        // Check if there's already a chart instance for this ID and destroy it
-        if (this.chartInstances.has(id)) {
-          const existingChart = this.chartInstances.get(id);
-          if (existingChart) {
-            existingChart.destroy();
-          }
-          this.chartInstances.delete(id);
-        }
-        
-        // Also check Chart.js global registry for any existing chart on this canvas
-        const canvas = ctx as HTMLCanvasElement;
-        const existingGlobalChart = Chart.getChart(canvas);
-        if (existingGlobalChart) {
-          existingGlobalChart.destroy();
-        }
-        
-        try {
-          const sparkchart = new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: labels,
-              datasets: [
-                {
-                  data: data
-                }
-              ]
-            },
-            options: {
-              responsive: true,
-              elements: {
-                line: {
-                  borderColor: '#4dc9f6',
-                  borderWidth: 1
-                },
-                point: {
-                  radius: 1
-                }
-              },
-              scales: {
-                yAxes:
-                  {
-                    display: true,
-                    ticks: {
-                      stepSize: 1
-                    }
-                  },
-                xAxes:
-                  {
-                    display: false
-                  }
-              },
-              plugins: {
-                legend: {
-                  display: false
-                },
-                tooltip: {
-                  enabled: true
-                },
-              }
-            }
-          });
-          
-          // Store the chart instance for proper cleanup
-          this.chartInstances.set(id, sparkchart);
-        } catch (error) {
-          console.error(`Error creating spark chart for ${id}:`, error);
-        }
-      });
-    },
-    
+
     updatePager(response: any): void {
       this.results = response.data;
       this.allStates = response.data.states || [];
@@ -448,13 +249,6 @@ interface PrefixNode {
   created() {
     this.fetchLocks();
     this.fetchStats();
-  },
-  beforeUnmount() {
-    // Clean up all chart instances to prevent memory leaks
-    this.chartInstances.forEach((chart: Chart) => {
-      chart.destroy();
-    });
-    this.chartInstances.clear();
   },
 })
 export default class StatesListV2 extends Vue {}
