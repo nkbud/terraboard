@@ -18,14 +18,8 @@
         <ul class="nav navbar-nav flex-grow-1 align-items-center">
           <li class="nav-item mx-2">
             <router-link to="/" class="nav-link"
-              ><span class="fas fa-th-list" aria-hidden="true"></span>
-              Overview
-            </router-link>
-          </li>
-          <li class="nav-item mx-2">
-            <router-link to="/overviewv2" class="nav-link"
               ><span class="fas fa-sitemap" aria-hidden="true"></span>
-              OverviewV2
+              Overview
             </router-link>
           </li>
           <li class="nav-item mx-2">
