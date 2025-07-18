@@ -1,7 +1,7 @@
 <template>
-  <Charts/>
+  <Charts />
   <hr>
-  <StatesList/>
+  <StatesList />
 </template>
 
 <script lang="ts">
@@ -14,6 +14,11 @@ import StatesList from '@/components/StatesList.vue'; // @ is an alias to /src
   components: {
     Charts,
     StatesList,
+  },
+  data() {
+    return {
+      selectedPrefix: null,
+    };
   },
   emits: ["refresh"],
   created() {
