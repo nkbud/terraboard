@@ -1,0 +1,123 @@
+{{- if .Values.oauth2Proxy.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "terraboard.fullname" . }}-oauth2-proxy
+  labels:
+    {{- include "terraboard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: oauth2-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "terraboard.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        {{- include "terraboard.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: oauth2-proxy
+    spec:
+      {{- with .Values.oauth2Proxy.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: oauth2-proxy
+        image: "{{ .Values.oauth2Proxy.image.repository }}:{{ .Values.oauth2Proxy.image.tag }}"
+        imagePullPolicy: {{ .Values.oauth2Proxy.image.pullPolicy }}
+        {{- with .Values.oauth2Proxy.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        ports:
+        - containerPort: 4180
+          name: http
+          protocol: TCP
+        env:
+        - name: OAUTH2_PROXY_PROVIDER
+          value: {{ .Values.oauth2Proxy.config.provider | quote }}
+        - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+          value: {{ .Values.oauth2Proxy.config.oidcIssuerUrl | quote }}
+        - name: OAUTH2_PROXY_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "terraboard.fullname" . }}-oauth2-proxy
+              key: client-id
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "terraboard.fullname" . }}-oauth2-proxy
+              key: client-secret
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "terraboard.fullname" . }}-oauth2-proxy
+              key: cookie-secret
+        - name: OAUTH2_PROXY_COOKIE_DOMAIN
+          value: {{ .Values.oauth2Proxy.config.cookieDomain | quote }}
+        - name: OAUTH2_PROXY_COOKIE_SECURE
+          value: {{ .Values.oauth2Proxy.config.cookieSecure | quote }}
+        - name: OAUTH2_PROXY_COOKIE_NAME
+          value: {{ .Values.oauth2Proxy.config.cookieName | quote }}
+        - name: OAUTH2_PROXY_COOKIE_EXPIRE
+          value: {{ .Values.oauth2Proxy.config.cookieExpire | quote }}
+        - name: OAUTH2_PROXY_EMAIL_DOMAINS
+          value: {{ .Values.oauth2Proxy.config.emailDomains | quote }}
+        - name: OAUTH2_PROXY_REDIRECT_URL
+          value: {{ .Values.oauth2Proxy.config.redirectUrl | quote }}
+        - name: OAUTH2_PROXY_UPSTREAMS
+          value: {{ .Values.oauth2Proxy.config.upstreams | quote }}
+        - name: OAUTH2_PROXY_SKIP_PROVIDER_CA_CERT
+          value: {{ .Values.oauth2Proxy.config.skipProviderCaCert | quote }}
+        - name: OAUTH2_PROXY_SET_AUTHORIZATION_HEADER
+          value: {{ .Values.oauth2Proxy.config.setAuthorizationHeader | quote }}
+        - name: OAUTH2_PROXY_SET_XAUTHREQUEST
+          value: {{ .Values.oauth2Proxy.config.setXauthrequest | quote }}
+        - name: OAUTH2_PROXY_PASS_BASIC_AUTH
+          value: {{ .Values.oauth2Proxy.config.passBasicAuth | quote }}
+        - name: OAUTH2_PROXY_PASS_ACCESS_TOKEN
+          value: {{ .Values.oauth2Proxy.config.passAccessToken | quote }}
+        - name: OAUTH2_PROXY_REQUEST_LOGGING
+          value: {{ .Values.oauth2Proxy.config.requestLogging | quote }}
+        - name: OAUTH2_PROXY_STANDARD_LOGGING
+          value: {{ .Values.oauth2Proxy.config.standardLogging | quote }}
+        - name: OAUTH2_PROXY_AUTH_LOGGING
+          value: {{ .Values.oauth2Proxy.config.authLogging | quote }}
+        - name: OAUTH2_PROXY_LOG_LEVEL
+          value: {{ .Values.oauth2Proxy.config.logLevel | quote }}
+        - name: OAUTH2_PROXY_HTTP_ADDRESS
+          value: "0.0.0.0:4180"
+        {{- range .Values.oauth2Proxy.config.skipAuthRegex }}
+        - name: OAUTH2_PROXY_SKIP_AUTH_REGEX
+          value: {{ . | quote }}
+        {{- end }}
+        args:
+        {{- range .Values.oauth2Proxy.config.extraArgs }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- with .Values.oauth2Proxy.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.oauth2Proxy.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.oauth2Proxy.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- with .Values.oauth2Proxy.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.oauth2Proxy.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.oauth2Proxy.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
