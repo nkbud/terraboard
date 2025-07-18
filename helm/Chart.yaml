@@ -1,8 +1,8 @@
 apiVersion: v2
 name: terraboard
 home: https://github.com/nkbud/terraboard
-version: __VERSION__
-appVersion: "__VERSION__"
+version: 1.0.0
+appVersion: "1.0.0"
 description: A web interface for Terraform states
 keywords:
   - terraform

@@ -1,0 +1,23 @@
+{{- if .Values.oauth2Proxy.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "terraboard.fullname" . }}-oauth2-proxy
+  labels:
+    {{- include "terraboard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: oauth2-proxy
+  {{- with .Values.oauth2Proxy.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.oauth2Proxy.service.type }}
+  ports:
+  - port: {{ .Values.oauth2Proxy.service.port }}
+    targetPort: {{ .Values.oauth2Proxy.service.targetPort }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "terraboard.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: oauth2-proxy
+{{- end }}
