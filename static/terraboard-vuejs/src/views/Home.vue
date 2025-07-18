@@ -1,7 +1,7 @@
 <template>
-  <Charts :selectedPrefix="selectedPrefix"/>
+  <Charts />
   <hr>
-  <StatesList @prefix-selected="onPrefixSelected"/>
+  <StatesList />
 </template>
 
 <script lang="ts">
@@ -19,11 +19,6 @@ import StatesList from '@/components/StatesList.vue'; // @ is an alias to /src
     return {
       selectedPrefix: null,
     };
-  },
-  methods: {
-    onPrefixSelected(prefix: string | null) {
-      this.selectedPrefix = prefix;
-    },
   },
   emits: ["refresh"],
   created() {
