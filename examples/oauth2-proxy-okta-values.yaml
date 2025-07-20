@@ -1,0 +1,121 @@
+# Sample OAuth2 Proxy Configuration for Terraboard with Okta
+# Copy this file and update the values marked with TODO
+
+# OAuth2 Proxy configuration
+oauth2Proxy:
+  enabled: true
+  image:
+    repository: quay.io/oauth2-proxy/oauth2-proxy
+    tag: v7.6.0
+    pullPolicy: IfNotPresent
+  
+  config:
+    # Okta OIDC configuration
+    provider: "oidc"
+    oidcIssuerUrl: "https://your-domain.okta.com/oauth2/default"  # TODO: Update with your Okta domain
+    clientId: "your-client-id"                                     # TODO: Update with your Okta app client ID
+    clientSecret: "your-client-secret"                             # TODO: Update with your Okta app client secret
+    
+    # Cookie configuration
+    cookieSecret: "your-generated-cookie-secret"                   # TODO: Generate with: openssl rand -base64 32
+    cookieDomain: "your-terraboard-domain.com"                    # TODO: Update with your domain
+    cookieSecure: true
+    cookieName: "_oauth2_proxy"
+    cookieExpire: "168h"  # 7 days
+    
+    # Email domain restrictions (optional)
+    emailDomains: "*"  # TODO: Consider restricting to your organization domain
+    
+    # Redirect URL
+    redirectUrl: "https://your-terraboard-domain.com/oauth2/callback"  # TODO: Update with your domain
+    
+    # Upstream service
+    upstreams: "http://terraboard:80"
+    
+    # Security settings
+    skipProviderCaCert: false
+    setAuthorizationHeader: true
+    setXauthrequest: true
+    
+    # Logging configuration
+    requestLogging: true
+    standardLogging: true
+    authLogging: true
+    logLevel: "info"
+    
+    # Additional OAuth2 Proxy arguments
+    extraArgs:
+      - "--scope=openid profile email"
+      - "--whitelist-domain=your-terraboard-domain.com"           # TODO: Update with your domain
+  
+  # Resource configuration
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Ingress configuration for OAuth2 Proxy
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod  # TODO: Update if using different cert manager
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: your-terraboard-domain.com                # TODO: Update with your domain
+      mainPaths: ['/']
+      swaggerPaths: ['/docs']
+  tls:
+    - secretName: terraboard-tls
+      hosts:
+        - your-terraboard-domain.com                  # TODO: Update with your domain
+
+# Standard Terraboard configuration
+terraboard:
+  base_url: "/"
+
+# Database configuration
+db:
+  host: "postgresql"                                   # TODO: Update with your database host
+  name: "terraboard"                                   # TODO: Update with your database name
+  user: "terraboard"                                   # TODO: Update with your database user
+  password: "your-db-password"                         # TODO: Update with your database password
+  sslmode: "require"                                   # TODO: Update based on your database SSL requirements
+
+# AWS configuration (if using S3 backend)
+aws:
+  region: "us-east-1"                                  # TODO: Update with your AWS region
+  bucket: "your-terraform-state-bucket"                # TODO: Update with your S3 bucket name
+  dynamodb_table: "terraform-state-lock"              # TODO: Update with your DynamoDB table name
+  file_extension: ".tfstate"
+
+# Additional environment variables (optional)
+additionalEnv:
+  - name: TERRABOARD_LOGOUT_URL
+    value: "https://your-terraboard-domain.com/oauth2/sign_out"  # TODO: Update with your domain
+
+# Resource configuration for main Terraboard container
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000

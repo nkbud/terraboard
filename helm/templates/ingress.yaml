@@ -2,16 +2,23 @@
 {{- $fullName := include "terraboard.fullname" . -}}
 {{- $mainPort := .Values.service.port -}}
 {{- $swaggerPort := .Values.swagger.service.port -}}
+{{- $oauth2ProxyPort := .Values.oauth2Proxy.service.port -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ $fullName }}
   labels:
     {{- include "terraboard.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    {{- if .Values.oauth2Proxy.enabled }}
+    # OAuth2 Proxy authentication annotations
+    nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
+    nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-Request-User,X-Auth-Request-Email,X-Auth-Request-Preferred-Username"
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.tls }}
   tls:
@@ -29,6 +36,16 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
+        {{- if $.Values.oauth2Proxy.enabled }}
+        # OAuth2 Proxy authentication paths
+        - path: /oauth2
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ $fullName }}-oauth2-proxy
+              port:
+                number: {{ $oauth2ProxyPort }}
+        {{- end }}
         {{- range .mainPaths }}
         - path: {{ . }}
           pathType: ImplementationSpecific

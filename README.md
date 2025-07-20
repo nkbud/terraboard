@@ -445,7 +445,48 @@ contains a Terraboard template to automate its installation in Cattle.
 ## Authentication and base URL
 
 Terraboard does not implement authentication. Instead, it is recommended to use
-an authentication proxy such as [oauth2_proxy](https://github.com/bitly/oauth2_proxy).
+an authentication proxy such as [oauth2_proxy](https://github.com/oauth2-proxy/oauth2-proxy).
+
+### OAuth2 Proxy Integration
+
+This repository includes comprehensive OAuth2 Proxy integration for Kubernetes deployments
+with support for Okta as the backend Identity Provider. The integration provides:
+
+- **Complete authentication gateway** for all Terraboard traffic
+- **Okta OIDC integration** with latest OAuth2 Proxy version
+- **Helm chart integration** with configurable values
+- **Secure cookie management** and session handling
+- **Comprehensive documentation** and examples
+
+#### Quick Start
+
+1. **Configure Okta Application**:
+   - Create a new OIDC Web Application in Okta
+   - Set redirect URI to `https://your-domain.com/oauth2/callback`
+   - Note the Client ID, Client Secret, and Issuer URL
+
+2. **Deploy with OAuth2 Proxy**:
+   ```bash
+   # Use the provided setup script
+   ./examples/setup-oauth2-proxy.sh
+   
+   # Or manually configure using the example values
+   helm upgrade --install terraboard . \
+     -f examples/oauth2-proxy-okta-values.yaml \
+     -n terraboard --create-namespace
+   ```
+
+3. **Access Terraboard**:
+   Navigate to your configured domain and authenticate through Okta.
+
+#### Documentation
+
+For detailed configuration and deployment instructions, see:
+- [OAuth2 Proxy Integration Guide](docs/oauth2-proxy-integration.md)
+- [Sample Configuration](examples/oauth2-proxy-okta-values.yaml)
+- [Setup Script](examples/setup-oauth2-proxy.sh)
+
+#### Manual Configuration
 
 If you need to set a route path for Terraboard, you can set a base URL by
 passing it as the `BASE_URL` environment variable.

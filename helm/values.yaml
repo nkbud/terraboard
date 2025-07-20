@@ -116,6 +116,127 @@ affinity: {}
 terraboard:
   base_url: "/"
 
+# OAuth2 Proxy configuration for authentication gateway
+oauth2Proxy:
+  enabled: false
+  image:
+    repository: quay.io/oauth2-proxy/oauth2-proxy
+    tag: v7.6.0
+    pullPolicy: IfNotPresent
+  
+  # Configuration for Okta OIDC provider
+  config:
+    # Okta configuration
+    provider: "oidc"
+    oidcIssuerUrl: ""  # https://your-domain.okta.com/oauth2/default
+    clientId: ""
+    clientSecret: ""
+    
+    # Cookie configuration
+    cookieSecret: ""  # Generate with: openssl rand -base64 32
+    cookieDomain: ""
+    cookieSecure: true
+    cookieName: "_oauth2_proxy"
+    cookieExpire: "168h"  # 7 days
+    
+    # Email domain restrictions (optional)
+    emailDomains: "*"
+    
+    # Redirect URL configuration
+    redirectUrl: ""  # https://your-domain.com/oauth2/callback
+    
+    # Upstream configuration
+    upstreams: "http://terraboard:80"
+    
+    # Skip provider CA verification (for testing only)
+    skipProviderCaCert: false
+    
+    # Set authorization header
+    setAuthorizationHeader: true
+    setXauthrequest: true
+    
+    # Pass basic auth, useful for some providers
+    passBasicAuth: false
+    
+    # Pass access token via header
+    passAccessToken: false
+    
+    # Skip authentication for specific paths
+    skipAuthRegex: []
+    
+    # Request logging
+    requestLogging: true
+    
+    # Standard logging
+    standardLogging: true
+    
+    # Auth logging
+    authLogging: true
+    
+    # Log level
+    logLevel: "info"
+    
+    # Additional configuration
+    extraArgs: []
+      # - "--scope=openid profile email"
+      # - "--insecure-oidc-allow-unverified-email"
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 4180
+    annotations: {}
+  
+  # Resources
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+  
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 2000
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  
+  # Pod security context
+  podSecurityContext:
+    fsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 2000
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Affinity
+  affinity: {}
+  
+  # Liveness probe
+  livenessProbe:
+    httpGet:
+      path: /ping
+      port: 4180
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  
+  # Readiness probe
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 4180
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
 aws:
   region: ""
   bucket: ""
