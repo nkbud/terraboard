@@ -54,6 +54,7 @@
     - [Terraform Enterprise Options](#terraform-enterprise-options)
     - [Google Cloud Platform Options](#google-cloud-platform-options)
     - [GitLab Options](#gitlab-options)
+    - [Kubernetes Options](#kubernetes-options)
     - [Web](#web)
     - [Help Options](#help-options)
 - [Push plans to Terraboard](#push-plans-to-terraboard)
@@ -93,6 +94,7 @@ It currently supports several remote state backend providers:
 - [Google Cloud Storage](https://www.terraform.io/docs/backends/types/gcs.html)
 - [Terraform Cloud (remote)](https://www.terraform.io/docs/backends/types/remote.html)
 - [GitLab](https://docs.gitlab.com/ee/user/infrastructure/terraform_state.html)
+- [Kubernetes](https://www.terraform.io/language/settings/backends/kubernetes)
 
 Terraboard is now able to handle multiple buckets/providers configuration! 🥳
 Check *configuration* section for more details.
@@ -145,6 +147,16 @@ Data resiliency is not paramount though as this dataset can be rebuilt upon your
 - Account on [Terraform Cloud](https://app.terraform.io/)
 - Existing organization
 - Token assigned to an organization
+
+#### Kubernetes
+
+- Access to a Kubernetes cluster
+- Kubernetes credentials configured via:
+  - kubeconfig file (default: `~/.kube/config`)
+  - In-cluster service account (for pods running in Kubernetes)
+- Required RBAC permissions for Secrets in the target namespace:
+  - `get`, `list` (for reading states)
+  - Optional: `create`, `update`, `patch`, `delete` (if Terraform writes states)
 
 ## Configuration
 

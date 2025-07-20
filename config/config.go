@@ -35,6 +35,8 @@ type configFlags struct {
 
 	Gitlab GitlabConfig `group:"GitLab Options" yaml:"gitlab"`
 
+	Kubernetes KubernetesConfig `group:"Kubernetes Options" yaml:"kubernetes"`
+
 	Web WebConfig `group:"Web" yaml:"web"`
 }
 
@@ -97,6 +99,18 @@ type GitlabConfig struct {
 	Token   string `long:"gitlab-token" env:"GITLAB_TOKEN" yaml:"token" description:"Token to authenticate upon GitLab"`
 }
 
+// KubernetesConfig stores the Kubernetes configuration
+type KubernetesConfig struct {
+	SecretSuffix           string            `long:"k8s-secret-suffix" env:"K8S_SECRET_SUFFIX" yaml:"secret-suffix" description:"Suffix for Kubernetes Secret names" default:"tfstate"`
+	Namespace              string            `long:"k8s-namespace" env:"K8S_NAMESPACE" yaml:"namespace" description:"Kubernetes namespace" default:"default"`
+	Labels                 map[string]string `yaml:"labels" description:"Labels to filter Kubernetes Secrets"`
+	ConfigPath             string            `long:"k8s-config-path" env:"K8S_CONFIG_PATH" yaml:"config-path" description:"Path to kubeconfig file"`
+	ConfigContext          string            `long:"k8s-config-context" env:"K8S_CONFIG_CONTEXT" yaml:"config-context" description:"Kubernetes context to use"`
+	ConfigContextAuthInfo  string            `long:"k8s-config-context-auth-info" env:"K8S_CONFIG_CONTEXT_AUTH_INFO" yaml:"config-context-auth-info" description:"Auth info for context"`
+	ConfigContextCluster   string            `long:"k8s-config-context-cluster" env:"K8S_CONFIG_CONTEXT_CLUSTER" yaml:"config-context-cluster" description:"Cluster for context"`
+	InClusterConfig        bool              `long:"k8s-in-cluster-config" env:"K8S_IN_CLUSTER_CONFIG" yaml:"in-cluster-config" description:"Use in-cluster configuration"`
+}
+
 // WebConfig stores the UI interface parameters
 type WebConfig struct {
 	Port        uint16 `short:"p" long:"port" env:"TERRABOARD_PORT" yaml:"port" description:"Port to listen on." default:"8080"`
@@ -131,6 +145,8 @@ type Config struct {
 	GCP []GCPConfig `group:"Google Cloud Platform Options" yaml:"gcp"`
 
 	Gitlab []GitlabConfig `group:"GitLab Options" yaml:"gitlab"`
+
+	Kubernetes []KubernetesConfig `group:"Kubernetes Options" yaml:"kubernetes"`
 
 	Web WebConfig `group:"Web" yaml:"web"`
 }
