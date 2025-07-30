@@ -78,7 +78,30 @@
           </ul>
         </div>
         <div id="nodes" class="card mt-4" v-if="display.details">
-          <h5 class="card-header">Modules</h5>
+          <h5 class="card-header">
+            <span v-if="!display.flatView">Modules</span>
+            <span v-else>Resources</span>
+            <div class="float-end">
+              <button 
+                type="button" 
+                class="btn btn-sm btn-outline-secondary me-2"
+                :class="{ 'active': !display.flatView }"
+                @click="display.flatView = false"
+                title="Module View"
+              >
+                <i class="fas fa-sitemap"></i>
+              </button>
+              <button 
+                type="button" 
+                class="btn btn-sm btn-outline-secondary"
+                :class="{ 'active': display.flatView }"
+                @click="display.flatView = true"
+                title="Flat Resource View"
+              >
+                <i class="fas fa-list"></i>
+              </button>
+            </div>
+          </h5>
           <ul id="nodeslist" class="list-group">
             <li class="list-group-item">
               <input
@@ -86,43 +109,70 @@
                 class="form-control"
                 type="search"
                 v-model="resFilter.value"
-                placeholder="Filter resources..."
+                :placeholder="display.flatView ? 'Filter resources...' : 'Filter resources...'"
               />
             </li>
-            <li
-              class="list-group-item"
-              v-for="mod in state.details.modules"
-              v-bind:key="mod.path"
-            >
-              <div
-                @click="display.mod = display.mod != mod ? mod : selectedMod"
-                class="node-name"
-                v-bind:class="{ selected: mod == selectedMod }"
+            <!-- Module View -->
+            <template v-if="!display.flatView">
+              <li
+                class="list-group-item"
+                v-for="mod in state.details.modules"
+                v-bind:key="mod.path"
               >
-                <h4>{{mod.path ? mod.path : "root"}}<span :id="'modSpan-'+mod.path" class="badge bg-secondary float-end w-5"
-                  ></span
-                ></h4>
-              </div>
-              <ul v-show="display.mod == mod" class="list-group">
-                <li
-                  v-for="r in filterResources(mod)"
-                  v-bind:key="r"
-                  v-bind:class="{ selected: r == selectedRes && !state.outputs }"
-                  @click="setSelected(mod, r)"
-                  class="list-group-item resource"
+                <div
+                  @click="display.mod = display.mod != mod ? mod : selectedMod"
+                  class="node-name"
+                  v-bind:class="{ selected: mod == selectedMod }"
                 >
-                  {{ r.type }}.{{ r.name }}{{ r.index }}
-                </li>
-                <li
-                  v-bind:class="{ selected: state.outputs}"
-                  v-if="mod.outputs.length &gt; 0"
-                  @click="setOutputs(mod)"
-                  class="list-group-item resource"
-                >
-                  Outputs
-                </li>
-              </ul>
-            </li>
+                  <h4>{{mod.path ? mod.path : "root"}}<span :id="'modSpan-'+mod.path" class="badge bg-secondary float-end w-5"
+                    ></span
+                  ></h4>
+                </div>
+                <ul v-show="display.mod == mod" class="list-group">
+                  <li
+                    v-for="r in filterResources(mod)"
+                    v-bind:key="r"
+                    v-bind:class="{ selected: r == selectedRes && !state.outputs }"
+                    @click="setSelected(mod, r)"
+                    class="list-group-item resource"
+                  >
+                    {{ r.type }}.{{ r.name }}{{ r.index }}
+                  </li>
+                  <li
+                    v-bind:class="{ selected: state.outputs}"
+                    v-if="mod.outputs.length &gt; 0"
+                    @click="setOutputs(mod)"
+                    class="list-group-item resource"
+                  >
+                    Outputs
+                  </li>
+                </ul>
+              </li>
+            </template>
+            
+            <!-- Flat Resource View -->
+            <template v-if="display.flatView">
+              <li
+                v-for="flatRes in filteredFlatResources"
+                v-bind:key="flatRes.fullAddress"
+                v-bind:class="{ selected: flatRes.resource == selectedRes && flatRes.module == selectedMod && !state.outputs }"
+                @click="setSelected(flatRes.module, flatRes.resource)"
+                class="list-group-item resource"
+              >
+                {{ flatRes.fullAddress }}
+              </li>
+              
+              <!-- Flat View Outputs -->
+              <li
+                v-for="mod in flatViewModulesWithOutputs"
+                v-bind:key="'outputs-' + mod.path"
+                v-bind:class="{ selected: state.outputs && mod == selectedMod}"
+                @click="setOutputs(mod)"
+                class="list-group-item resource"
+              >
+                {{ mod.path ? mod.path + ".outputs" : "outputs" }}
+              </li>
+            </template>
           </ul>
         </div>
       </div>
@@ -190,6 +240,7 @@ import StatesCompare from "../components/StatesCompare.vue";
         compare: false,
         outputs: false,
         mod: {},
+        flatView: false,
       },
       state: {
         details: {},
@@ -397,6 +448,43 @@ import StatesCompare from "../components/StatesCompare.vue";
             // always executed
           });
       }
+    },
+  },
+  computed: {
+    flatResources() {
+      const flatList: any[] = [];
+      if (this.state.details.modules) {
+        this.state.details.modules.forEach((module: any) => {
+          module.resources.forEach((resource: any) => {
+            const modulePath = module.path || "root";
+            const resourceName = `${resource.type}.${resource.name}${resource.index || ""}`;
+            const fullAddress = modulePath === "root" 
+              ? resourceName 
+              : `${modulePath}.${resourceName}`;
+            
+            flatList.push({
+              fullAddress: fullAddress,
+              module: module,
+              resource: resource,
+            });
+          });
+        });
+      }
+      return flatList.sort((a, b) => a.fullAddress.localeCompare(b.fullAddress));
+    },
+    filteredFlatResources() {
+      if (!this.resFilter.value) {
+        return this.flatResources;
+      }
+      return this.flatResources.filter((flatRes: any) => 
+        flatRes.fullAddress.toLowerCase().includes(this.resFilter.value.toLowerCase())
+      );
+    },
+    flatViewModulesWithOutputs() {
+      if (!this.state.details.modules) {
+        return [];
+      }
+      return this.state.details.modules.filter((mod: any) => mod.outputs.length > 0);
     },
   },
   watch: {
